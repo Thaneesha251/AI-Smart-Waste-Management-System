@@ -1,0 +1,25 @@
+# Environments
+venv/
+venv_ml/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# DB files
+*.db
+*.sqlite3
+
+# ML models (optional)
+*.pkl
+*.joblib
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
