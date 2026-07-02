@@ -1,0 +1,31 @@
+.content-wrapper { display: flex; flex-direction: column; gap: 24px; }
+.content-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.header-title { font-size: 22px; font-weight: 700; margin: 0; }
+.panel-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); border: 1px solid #f1f5f9; }
+.notif-list { display: flex; flex-direction: column; gap: 12px; }
+.notif-item { display: flex; gap: 16px; padding: 16px; border-left: 4px solid transparent; border-radius: 8px; background: #f8fafc; }
+.notif-item.unread { border-left-color: #16a34a; }
+.notif-icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.notif-critical { background: #fee2e2; color: #dc2626; }
+.notif-warning { background: #fef3c7; color: #d97706; }
+.notif-info { background: #dbeafe; color: #2563eb; }
+.notif-success { background: #dcfce7; color: #16a34a; }
+.notif-title { font-weight: 700; }
+.notif-description { color: #64748b; margin-top: 4px; }
+.notif-time { display: flex; align-items: center; gap: 6px; color: #64748b; margin-top: 6px; font-size: 0.92rem; }
+.reports-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.report-card { display: flex; flex-direction: column; gap: 16px; }
+.settings-layout { display: flex; gap: 20px; }
+.settings-nav { width: 220px; display: flex; flex-direction: column; gap: 6px; }
+.settings-nav-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; background: transparent; border: none; color: #64748b; cursor: pointer; }
+.settings-nav-item.active { background: #ecfdf5; color: #16a34a; }
+.settings-content { flex: 1; }
+.toggle-wrapper { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #e2e8f0; }
+.toggle-switch { position: relative; width: 44px; height: 24px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; inset: 0; background: #cbd5e1; border-radius: 999px; cursor: pointer; }
+.slider:before { content: ''; position: absolute; width: 18px; height: 18px; background: white; left: 3px; top: 3px; border-radius: 50%; transition: 0.2s; }
+.toggle-switch input:checked + .slider { background: #16a34a; }
+.toggle-switch input:checked + .slider:before { transform: translateX(20px); }
+.settings-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
+.mark-read-btn { background: #0f172a; color: white; padding: 10px 14px; }

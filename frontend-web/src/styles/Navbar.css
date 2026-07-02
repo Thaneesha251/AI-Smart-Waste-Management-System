@@ -1,0 +1,9 @@
+.navbar { height: 64px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; position: sticky; top: 0; z-index: 50; }
+.navbar-left, .navbar-right { display: flex; align-items: center; gap: 12px; }
+.menu-btn { width: 40px; height: 40px; border: 1px solid #e2e8f0; border-radius: 10px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.navbar-center { flex: 1; display: flex; justify-content: center; padding: 0 20px; }
+.search-box { width: min(520px, 100%); display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 999px; background: #f8fafc; }
+.search-box input { border: none; outline: none; width: 100%; background: transparent; }
+.navbar-icon-wrap { position: relative; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #f8fafc; }
+.navbar-icon-wrap .nav-badge { position: absolute; top: -2px; right: -2px; }
+.navbar-date, .navbar-time { display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 0.92rem; }
