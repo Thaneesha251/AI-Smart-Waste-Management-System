@@ -1,13 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Enum
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy.sql import func
+
 from app.core.database import Base
-import enum
-
-
-class ComplaintStatus(str, enum.Enum):
-    pending = "pending"
-    in_progress = "in_progress"
-    resolved = "resolved"
+from app.models.enums import ComplaintStatus
 
 
 class Complaint(Base):
@@ -15,18 +10,16 @@ class Complaint(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Basic complaint data
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
     title = Column(String(255), nullable=False)
-    description = Column(Text, nullable=False)
-    location = Column(String(255), nullable=True)
+    description = Column(String(1000), nullable=False)
 
-    # Workflow status
-    status = Column(Enum(ComplaintStatus), default=ComplaintStatus.pending)
+    status = Column(
+        String(50),
+        nullable=False,
+        default=ComplaintStatus.PENDING.value
+    )
 
-    # AI-generated fields (NEW)
-    priority = Column(String(50), default="low")   # low / medium / high
-    category = Column(String(100), nullable=True)  # garbage / drainage / etc.
-    tags = Column(String(255), nullable=True)      # comma-separated tags
-
-    # Timestamp
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
