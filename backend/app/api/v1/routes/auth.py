@@ -1,50 +1,86 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+from jose import jwt
+
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserResponse
-# Simple password hashing (in a real app, use passlib)
-import hashlib
+from app.utils.response import success, error
 
 router = APIRouter()
 
-def hash_password(password: str):
-    return hashlib.sha256(password.encode()).hexdigest()
 
-@router.post("/register", response_model=UserResponse)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    # Check if user exists
-    db_user = db.query(User).filter(User.username == user_data.username).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+# ---------------------------
+# CREATE JWT TOKEN
+# ---------------------------
+def create_access_token(data: dict):
+    to_encode = data.copy()
 
-    db_email = db.query(User).filter(User.email == user_data.email).first()
-    if db_email:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    new_user = User(
-        username=user_data.username,
-        email=user_data.email,
-        hashed_password=hash_password(user_data.password),
-        role=user_data.role,
-        phone=user_data.phone,
-        address=user_data.address
+    expire = datetime.utcnow() + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
-    db.add(new_user)
+    to_encode.update({"exp": expire})
+
+    return jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+
+
+# ---------------------------
+# REGISTER USER
+# ---------------------------
+@router.post("/register")
+def register(email: str, password: str, role: str = "user", db: Session = Depends(get_db)):
+
+    existing_user = db.query(User).filter(User.email == email).first()
+
+    if existing_user:
+        return error("User already exists")
+
+    user = User(
+        email=email,
+        password=password,
+        role=role
+    )
+
+    db.add(user)
     db.commit()
-    db.refresh(new_user)
-    return new_user
+    db.refresh(user)
 
+    return success(
+        "User created successfully",
+        {"id": user.id, "email": user.email}
+    )
+
+
+# ---------------------------
+# LOGIN USER
+# ---------------------------
 @router.post("/login")
-def login(login_data: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == login_data.username).first()
-    if not user or user.hashed_password != hash_password(login_data.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
 
-    return {
-        "message": "Login successful",
+    user = db.query(User).filter(User.email == form_data.username).first()
+
+    if not user or user.password != form_data.password:
+        return error("Invalid credentials")
+
+    token = create_access_token({
         "user_id": user.id,
-        "username": user.username,
         "role": user.role
-    }
+    })
+
+    return success(
+        "Login successful",
+        {
+            "access_token": token,
+            "token_type": "bearer"
+        }
+    )

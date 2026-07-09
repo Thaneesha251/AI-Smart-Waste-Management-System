@@ -1,41 +1,82 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
 from app.core.database import get_db
-from app.schemas.complaint import ComplaintCreate, ComplaintUpdate, ComplaintResponse
-from app.crud import complaint as crud_complaint
-from typing import List
+from app.core.dependencies import get_current_user
+from app.core.rbac import require_admin
 
-router = APIRouter()
+from app.models.user import User
+from app.services.complaint_service import (
+    create_complaint,
+    get_user_complaints,
+    get_all_complaints,
+    update_complaint_status
+)
 
-@router.post("/", status_code=201)
-def create_new_complaint(data: ComplaintCreate, db: Session = Depends(get_db)):
-    return crud_complaint.create_complaint(db, data)
+from app.utils.response import success, error
 
-@router.get("/", response_model=List[ComplaintResponse])
-def read_all_complaints(db: Session = Depends(get_db)):
-    return crud_complaint.get_all_complaints(db)
+router = APIRouter(prefix="/complaints", tags=["Complaints"])
 
-@router.get("/citizen/{citizen_id}", response_model=List[ComplaintResponse])
-def read_citizen_complaints(citizen_id: int, db: Session = Depends(get_db)):
-    return crud_complaint.get_citizen_complaints(db, citizen_id)
 
-@router.get("/{complaint_id}", response_model=ComplaintResponse)
-def read_complaint(complaint_id: int, db: Session = Depends(get_db)):
-    db_complaint = crud_complaint.get_complaint(db, complaint_id)
-    if not db_complaint:
-        raise HTTPException(status_code=404, detail="Complaint not found")
-    return db_complaint
+# ---------------------------
+# CREATE COMPLAINT (USER)
+# ---------------------------
+@router.post("/create")
+def create(
+    title: str,
+    description: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    complaint = create_complaint(db, user.id, title, description)
 
-@router.put("/{complaint_id}", response_model=ComplaintResponse)
-def update_existing_complaint(complaint_id: int, data: ComplaintUpdate, db: Session = Depends(get_db)):
-    db_complaint = crud_complaint.update_complaint(db, complaint_id, data)
-    if not db_complaint:
-        raise HTTPException(status_code=404, detail="Complaint not found")
-    return db_complaint
+    return success(
+        "Complaint created successfully",
+        {
+            "id": complaint.id,
+            "title": complaint.title,
+            "status": complaint.status
+        }
+    )
 
-@router.delete("/{complaint_id}")
-def delete_existing_complaint(complaint_id: int, db: Session = Depends(get_db)):
-    success = crud_complaint.delete_complaint(db, complaint_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Complaint not found")
-    return {"message": "Complaint deleted successfully"}
+
+# ---------------------------
+# GET USER COMPLAINTS
+# ---------------------------
+@router.get("/my")
+def my_complaints(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    complaints = get_user_complaints(db, user.id)
+    return success("User complaints fetched", complaints)
+
+
+# ---------------------------
+# ADMIN - GET ALL COMPLAINTS
+# ---------------------------
+@router.get("/all")
+def all_complaints(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin)
+):
+    complaints = get_all_complaints(db)
+    return success("All complaints fetched", complaints)
+
+
+# ---------------------------
+# ADMIN - UPDATE STATUS
+# ---------------------------
+@router.put("/status/{complaint_id}")
+def update_status(
+    complaint_id: int,
+    status: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_admin)
+):
+    updated = update_complaint_status(db, complaint_id, status)
+
+    if not updated:
+        return error("Complaint not found", status_code=404)
+
+    return success("Complaint status updated", updated)
