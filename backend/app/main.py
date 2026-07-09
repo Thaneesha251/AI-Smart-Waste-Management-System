@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1.routes import complaint
+from app.api.v1.routes import complaint, auth
 from app.core.database import Base, engine
 
 # NOTE: For development only (avoid in production)
@@ -11,7 +11,13 @@ app = FastAPI(
     description="Backend API for smart waste tracking, complaints, and AI-based management"
 )
 
-# Include routers with proper versioning + prefix
+# Include routers
+app.include_router(
+    auth.router,
+    prefix="/api/v1/auth",
+    tags=["Authentication"]
+)
+
 app.include_router(
     complaint.router,
     prefix="/api/v1/complaints",
