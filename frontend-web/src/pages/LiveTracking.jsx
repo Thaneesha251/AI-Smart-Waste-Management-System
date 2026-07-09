@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CircleAlert, MapPin, Search, ShieldAlert, X } from 'lucide-react';
 import { getComplaints } from '../services/complaintsService';
-import { getWorkersForMap } from '../services/workersService';
+import { getWorkersForMap, assignWorkerToComplaint, unassignWorker } from '../services/workersService';
 import Map from '../components/Map';
 import '../styles/LiveTracking.css';
 
 const LiveTracking = () => {
   const [activeTab, setActiveTab] = useState('Complaints');
+  const [search, setSearch] = useState('');
   const [complaints, setComplaints] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -22,20 +23,59 @@ const LiveTracking = () => {
       setWorkers(workerData);
     };
     load();
+    // Poll every 5 seconds so worker positions + assignments stay live
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const idleWorkers = useMemo(() => workers.filter((worker) => worker.currentTask === 'None'), [workers]);
 
+  // Filters complaints by ID (with or without #), location, or waste type
+  const filteredComplaints = useMemo(() => {
+    const term = search.replace('#', '').toLowerCase().trim();
+    if (!term) return complaints;
+    return complaints.filter((item) =>
+      item.id.toLowerCase().replace('#', '').includes(term) ||
+      item.location.toLowerCase().includes(term) ||
+      item.type.toLowerCase().includes(term)
+    );
+  }, [complaints, search]);
+
+  // Filters workers by name when on the Workers tab
+  const filteredWorkers = useMemo(() => {
+    const term = search.toLowerCase().trim();
+    if (!term) return workers;
+    return workers.filter((worker) => worker.name.toLowerCase().includes(term));
+  }, [workers, search]);
+
   const handleAssign = async () => {
     if (!selectedComplaint || !selectedWorker) return;
+    await assignWorkerToComplaint(selectedWorker.id, selectedComplaint.id);
     setSuccess(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       setShowModal(false);
       setSelectedWorker(null);
       setSuccess(false);
       setComplaints((prev) => prev.map((item) => item.id === selectedComplaint.id ? { ...item, assignedWorker: selectedWorker.name } : item));
-      setWorkers((prev) => prev.map((worker) => worker.id === selectedWorker.id ? { ...worker, currentTask: `Complaint ${selectedComplaint.id}` } : worker));
+      const updatedWorkers = await getWorkersForMap();
+      setWorkers(updatedWorkers);
     }, 1400);
+  };
+
+  // Opens the assign modal. If this complaint already has a worker
+  // (Reassign case), free that worker first so they show up as idle
+  // again in the picker.
+  const handleOpenAssignModal = async (item) => {
+    if (item.assignedWorker) {
+      const previousWorker = workers.find(w => w.name === item.assignedWorker);
+      if (previousWorker) {
+        await unassignWorker(previousWorker.id);
+        const updatedWorkers = await getWorkersForMap();
+        setWorkers(updatedWorkers);
+      }
+    }
+    setSelectedComplaint(item);
+    setShowModal(true);
   };
 
   const markers = useMemo(() => {
@@ -56,7 +96,12 @@ const LiveTracking = () => {
         <div className="lt-toolbar">
           <div className="search-box dark-search">
             <Search size={16} />
-            <input type="text" placeholder="Search" />
+            <input
+              type="text"
+              placeholder="Search by complaint #, location, or waste type..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
         </div>
         <div className="lt-tabs">
@@ -66,7 +111,10 @@ const LiveTracking = () => {
 
         {activeTab === 'Complaints' ? (
           <div className="lt-list">
-            {complaints.map((item) => (
+            {filteredComplaints.length === 0 && (
+              <div className="empty-state">No complaints match "{search}"</div>
+            )}
+            {filteredComplaints.map((item) => (
               <div key={item.id} className="lt-card">
                 <div className="lt-card-head">
                   <h4>{item.id}</h4>
@@ -76,13 +124,16 @@ const LiveTracking = () => {
                 <div className="lt-muted"><MapPin size={14} /> {item.location}</div>
                 <div className="lt-muted">Status: {item.status}</div>
                 <div className="lt-muted">Assigned worker: <span className={item.assignedWorker ? 'assigned-worker' : ''}>{item.assignedWorker || 'Unassigned'}</span></div>
-                <button className="lt-btn" onClick={() => { setSelectedComplaint(item); setShowModal(true); }}> {item.assignedWorker ? 'Reassign Worker' : 'Assign Worker'}</button>
+                <button className="lt-btn" onClick={() => handleOpenAssignModal(item)}> {item.assignedWorker ? 'Reassign Worker' : 'Assign Worker'}</button>
               </div>
             ))}
           </div>
         ) : (
           <div className="lt-list">
-            {workers.map((worker) => (
+            {filteredWorkers.length === 0 && (
+              <div className="empty-state">No workers match "{search}"</div>
+            )}
+            {filteredWorkers.map((worker) => (
               <div key={worker.id} className="lt-card">
                 <div className="lt-card-head">
                   <h4>{worker.name}</h4>

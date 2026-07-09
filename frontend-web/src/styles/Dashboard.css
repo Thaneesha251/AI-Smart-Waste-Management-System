@@ -133,3 +133,67 @@ button, input, select, textarea { font: inherit; }
   .settings-layout { flex-direction: column; }
   .settings-nav { width: 100%; }
 }
+
+/* ── Dark Mode ─────────────────────────────────────────────── */
+body.dark-mode {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+body.dark-mode .page-content,
+body.dark-mode .dashboard-card,
+body.dark-mode .panel-card,
+body.dark-mode .table-card,
+body.dark-mode .chart-card,
+body.dark-mode .stats-chart-card,
+body.dark-mode .distribution-card,
+body.dark-mode .worker-card,
+body.dark-mode .vcard,
+body.dark-mode .settings-nav,
+body.dark-mode .settings-content,
+body.dark-mode .recent-complaints,
+body.dark-mode .lt-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .navbar {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .card-value,
+body.dark-mode .page-title,
+body.dark-mode .header-title,
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4 {
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode .card-label,
+body.dark-mode .card-sublabel,
+body.dark-mode .page-sub,
+body.dark-mode .header-subtitle {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .data-table th,
+body.dark-mode .complaints-table th {
+  background: #0f172a !important;
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .data-table td,
+body.dark-mode .complaints-table td {
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .search-box {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .search-box input {
+  color: #e2e8f0 !important;
+}

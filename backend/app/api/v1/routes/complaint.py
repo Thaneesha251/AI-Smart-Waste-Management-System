@@ -8,7 +8,10 @@ from app.crud.complaint import (
     get_complaint,
     get_all_complaints,
     update_complaint,
-    delete_complaint
+    delete_complaint,
+    search_complaints,
+    assign_worker_to_complaint,
+    release_worker_from_complaint
 )
 
 router = APIRouter()
@@ -55,3 +58,34 @@ def delete_complaint_api(complaint_id: int, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Complaint not found")
     return {"message": "Complaint deleted successfully"}
+
+
+# SEARCH
+@router.get("/search/{query}")
+def search_complaints_api(query: str, db: Session = Depends(get_db)):
+    complaints = search_complaints(db, query)
+    if not complaints:
+        return {"results": [], "message": "No complaints found."}
+    return {"results": complaints, "count": len(complaints)}
+
+
+# ASSIGN WORKER
+@router.post("/{complaint_id}/assign/{worker_id}")
+def assign_worker_api(
+    complaint_id: int,
+    worker_id: int,
+    db: Session = Depends(get_db)
+):
+    complaint = assign_worker_to_complaint(db, complaint_id, worker_id)
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    return complaint
+
+
+# RELEASE WORKER
+@router.post("/{complaint_id}/release")
+def release_worker_api(complaint_id: int, db: Session = Depends(get_db)):
+    complaint = release_worker_from_complaint(db, complaint_id)
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    return complaint

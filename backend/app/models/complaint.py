@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Text, Enum, Boolean, Float, ForeignKey
 from datetime import datetime
 from app.core.database import Base
 import enum
@@ -8,6 +8,7 @@ class ComplaintStatus(str, enum.Enum):
     pending = "pending"
     in_progress = "in_progress"
     resolved = "resolved"
+    cancelled = "cancelled"
 
 
 class Complaint(Base):
@@ -28,5 +29,9 @@ class Complaint(Base):
     category = Column(String(100), nullable=True)  # garbage / drainage / etc.
     tags = Column(String(255), nullable=True)      # comma-separated tags
 
+    # Worker assignment
+    assigned_worker_id = Column(Integer, ForeignKey("workers.id"), nullable=True)
+
     # Timestamp
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

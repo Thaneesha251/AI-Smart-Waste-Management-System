@@ -1,5 +1,6 @@
 import { Bell, Palette, Shield, User } from 'lucide-react';
 import { useState } from 'react';
+import { useSettings } from '../context/SettingsContext';
 import '../styles/Pages.css';
 
 const tabs = [
@@ -13,6 +14,7 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('system');
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ name: 'Admin Officer', department: 'Municipality', email: 'admin@smartwaste.gov' });
+  const { darkMode, setDarkMode, autoAssign, setAutoAssign } = useSettings();
 
   const handleSave = () => {
     setSaved(true);
@@ -46,7 +48,7 @@ const Settings = () => {
                   <p>Automatically route new issues to available workers.</p>
                 </div>
                 <label className="toggle-switch">
-                  <input type="checkbox" defaultChecked />
+                  <input type="checkbox" checked={autoAssign} onChange={(e) => setAutoAssign(e.target.checked)} />
                   <span className="slider" />
                 </label>
               </div>
@@ -56,7 +58,7 @@ const Settings = () => {
                   <p>Enable dark styling across analytics dashboards.</p>
                 </div>
                 <label className="toggle-switch">
-                  <input type="checkbox" defaultChecked />
+                  <input type="checkbox" checked={darkMode} onChange={(e) => setDarkMode(e.target.checked)} />
                   <span className="slider" />
                 </label>
               </div>

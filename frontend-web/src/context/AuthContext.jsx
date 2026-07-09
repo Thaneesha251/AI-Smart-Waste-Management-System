@@ -8,14 +8,14 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Always require a fresh login every time the app starts — the sign-in
+  // page must show first on every run, never skip straight to the
+  // dashboard using a leftover previous session.
   useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
-    const storedUser = localStorage.getItem('authUser');
-
-    if (storedToken && storedUser) {
-      setIsLoggedIn(true);
-      setUser(JSON.parse(storedUser));
-    }
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
+    setIsLoggedIn(false);
+    setUser(null);
     setLoading(false);
   }, []);
 

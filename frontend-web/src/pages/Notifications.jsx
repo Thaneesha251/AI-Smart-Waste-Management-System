@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Bell, CheckCircle, Clock, Info } from 'lucide-react';
-import { getNotifications, markAllAsRead } from '../services/notificationsService';
+import { getNotifications, markAllAsRead, markAsRead } from '../services/notificationsService';
 import '../styles/Pages.css';
 
 const iconMap = {
@@ -33,7 +33,12 @@ const Notifications = () => {
 
   const handleMarkAll = async () => {
     await markAllAsRead();
-    setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+    setItems((prev) => prev.map((item) => ({ ...item, is_read: true })));
+  };
+
+  const handleOpenNotification = async (id) => {
+    await markAsRead(id);
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, is_read: true } : item)));
   };
 
   return (
@@ -51,14 +56,21 @@ const Notifications = () => {
             {items.map((item) => {
               const Icon = iconMap[item.icon] || Bell;
               return (
-                <div key={item.id} className={`notif-item ${item.read ? '' : 'unread'}`}>
+                <div
+                  key={item.id}
+                  className={`notif-item ${item.is_read ? '' : 'unread'}`}
+                  onClick={() => handleOpenNotification(item.id)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className={`notif-icon ${typeStyles[item.type]}`}>
                     <Icon size={18} />
                   </div>
                   <div className="notif-content">
                     <div className="notif-title">{item.title}</div>
                     <div className="notif-description">{item.description}</div>
-                    <div className="notif-time"><Clock size={14} /> {item.time}</div>
+                    <div className="notif-time">
+                      <Clock size={14} /> {new Date(item.created_at).toLocaleString()}
+                    </div>
                   </div>
                 </div>
               );
