@@ -1,10 +1,22 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1.routes import complaint, stats, auth, notification, worker
+from app.api.v1.routes import complaint
 from app.core.database import Base, engine
+from app.core.middleware import LoggingMiddleware
+from app.core.exceptions.handlers import register_exception_handlers
 
-# NOTE: For development only (avoid in production)
+from app.api.v1.routes import auth, complaint, admin
+
+
+# ==========================================================
+# DATABASE INITIALIZATION (Development Only)
+# ==========================================================
+
 Base.metadata.create_all(bind=engine)
+
+
+# ==========================================================
+# CREATE FASTAPI APPLICATION
+# ==========================================================
 
 app = FastAPI(
     title="AI Smart Waste Management System",
@@ -12,21 +24,7 @@ app = FastAPI(
     description="Backend API for smart waste tracking, complaints, and AI-based management"
 )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Include routers with proper versioning + prefix
-app.include_router(
-    auth.router,
-    prefix="/api/v1/auth",
-    tags=["Authentication"]
-)
 app.include_router(
     complaint.router,
     prefix="/api/v1/complaints",
@@ -48,10 +46,33 @@ app.include_router(
     tags=["Stats"]
 )
 
-# Root endpoint
-@app.get("/")
+app.include_router(
+    admin.router,
+    prefix="/api/v1/admin",
+    tags=["Admin"]
+)
+
+
+# ==========================================================
+# ROOT
+# ==========================================================
+
+@app.get("/", tags=["Root"])
 def root():
     return {
-        "message": "API Running Successfully",
-        "status": "active"
+        "success": True,
+        "message": "AI Smart Waste Management Backend is Running",
+        "version": "1.0.0"
+    }
+
+
+# ==========================================================
+# HEALTH CHECK
+# ==========================================================
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {
+        "success": True,
+        "status": "Healthy"
     }

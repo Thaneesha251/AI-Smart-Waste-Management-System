@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# SQLite DB (you already have test.db)
 DATABASE_URL = "sqlite:///./test.db"
 
 engine = create_engine(
@@ -17,8 +16,6 @@ SessionLocal = sessionmaker(
 
 Base = declarative_base()
 
-
-# Dependency for FastAPI
 def get_db():
     db = SessionLocal()
     try:
