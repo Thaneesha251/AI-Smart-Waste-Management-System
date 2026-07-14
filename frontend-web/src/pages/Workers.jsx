@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Clock3, MapPin, Phone } from 'lucide-react';
-import { getWorkers } from '../services/workersService';
+import { CheckCircle2, Clock3, MapPin, Phone, X } from 'lucide-react';
+import { getWorkers, addWorker } from '../services/workersService';
 
 const Workers = () => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newWorker, setNewWorker] = useState({ name: '', zone: '', phone: '' });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -22,6 +25,16 @@ const Workers = () => {
     return 'status-inprogress';
   };
 
+  const handleAddWorker = async () => {
+    if (!newWorker.name.trim() || !newWorker.zone.trim() || !newWorker.phone.trim()) return;
+    setSaving(true);
+    const created = await addWorker(newWorker);
+    setWorkers((prev) => [...prev, created]);
+    setNewWorker({ name: '', zone: '', phone: '' });
+    setSaving(false);
+    setShowAddModal(false);
+  };
+
   return (
     <div className="content-wrapper">
       <div className="content-header">
@@ -29,7 +42,7 @@ const Workers = () => {
           <h2 className="header-title">Workers</h2>
           <p className="header-subtitle">Manage field team availability and performance.</p>
         </div>
-        <button className="primary-btn">Add Worker</button>
+        <button className="primary-btn" onClick={() => setShowAddModal(true)}>Add Worker</button>
       </div>
       {loading ? <div className="empty-state">Loading workers...</div> : (
         <div className="workers-grid">
@@ -53,6 +66,49 @@ const Workers = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showAddModal && (
+        <div className="modal-backdrop" onClick={() => setShowAddModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add New Worker</h3>
+              <button className="icon-btn" onClick={() => setShowAddModal(false)}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              <label className="field-label">Full Name</label>
+              <input
+                className="assign-input"
+                placeholder="e.g. Vijay Kumar"
+                value={newWorker.name}
+                onChange={(e) => setNewWorker({ ...newWorker, name: e.target.value })}
+              />
+              <label className="field-label">Zone</label>
+              <input
+                className="assign-input"
+                placeholder="e.g. Zone G"
+                value={newWorker.zone}
+                onChange={(e) => setNewWorker({ ...newWorker, zone: e.target.value })}
+              />
+              <label className="field-label">Phone Number</label>
+              <input
+                className="assign-input"
+                placeholder="e.g. +91 98765 43220"
+                value={newWorker.phone}
+                onChange={(e) => setNewWorker({ ...newWorker, phone: e.target.value })}
+              />
+            </div>
+            <div className="modal-footer">
+              <button
+                className="assign-confirm-btn"
+                disabled={!newWorker.name.trim() || !newWorker.zone.trim() || !newWorker.phone.trim() || saving}
+                onClick={handleAddWorker}
+              >
+                {saving ? 'Adding...' : 'Add Worker'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

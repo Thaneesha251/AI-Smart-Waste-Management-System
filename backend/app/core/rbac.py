@@ -25,3 +25,14 @@ def require_user(user: User = Depends(get_current_user)):
             detail="User access required"
         )
     return user
+
+
+def require_role(*roles: str):
+    def dependency(user: User = Depends(get_current_user)):
+        if user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access forbidden: insufficient permissions"
+            )
+        return user
+    return dependency

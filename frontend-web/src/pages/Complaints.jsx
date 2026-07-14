@@ -8,6 +8,7 @@ const Complaints = () => {
   const [search, setSearch] = useState('');
   const [currentTab, setCurrentTab] = useState('All');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [showRecentOnly, setShowRecentOnly] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -20,12 +21,23 @@ const Complaints = () => {
   }, []);
 
   const filteredComplaints = useMemo(() => {
-    return complaints.filter((item) => {
+    let list = complaints.filter((item) => {
       const matchesSearch = `${item.location} ${item.type}`.toLowerCase().includes(search.toLowerCase());
       const matchesTab = currentTab === 'All' || item.status === currentTab;
       return matchesSearch && matchesTab;
     });
-  }, [complaints, search, currentTab]);
+
+    // "New Complaint" toggle — show only the 3 most recently reported
+    // complaints. Mock data is already ordered most-recent-first (id
+    // #145 is newer than #144, etc.), so slicing the first 3 works here.
+    // Once connected to the real backend, this should sort by the
+    // actual created_at/time field before slicing.
+    if (showRecentOnly) {
+      list = list.slice(0, 3);
+    }
+
+    return list;
+  }, [complaints, search, currentTab, showRecentOnly]);
 
   const getPriorityClass = (priority) => {
     if (priority === 'High') return 'priority-high';
@@ -46,8 +58,19 @@ const Complaints = () => {
           <h2 className="header-title">Complaints</h2>
           <p className="header-subtitle">Track and review reported waste issues.</p>
         </div>
-        <button className="primary-btn">New Complaint</button>
+        <button
+          className="primary-btn"
+          onClick={() => setShowRecentOnly((prev) => !prev)}
+        >
+          {showRecentOnly ? 'Show All Complaints' : 'New Complaint'}
+        </button>
       </div>
+
+      {showRecentOnly && (
+        <div className="empty-state" style={{ padding: '10px 16px', textAlign: 'left', background: '#eff6ff', color: '#1d4ed8', borderRadius: '10px', fontSize: '13px', fontWeight: 500 }}>
+          Showing the 3 most recently reported complaints.
+        </div>
+      )}
 
       <div className="panel-card">
         <div className="content-header">

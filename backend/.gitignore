@@ -23,3 +23,5 @@ __pycache__/
 
 # OS
 .DS_Store
+
+backend/app/static/uploads/

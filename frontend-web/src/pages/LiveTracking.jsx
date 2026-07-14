@@ -16,15 +16,25 @@ const LiveTracking = () => {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
+    // Initial load — fetch fresh complaints + workers
+    const loadInitial = async () => {
       const complaintData = await getComplaints();
       const workerData = await getWorkersForMap();
       setComplaints(complaintData);
       setWorkers(workerData);
     };
-    load();
-    // Poll every 5 seconds so worker positions + assignments stay live
-    const interval = setInterval(load, 5000);
+    loadInitial();
+
+    // Poll workers every 5 seconds for live GPS movement — this is safe
+    // to overwrite since worker assignment state (currentTask) already
+    // lives in the shared workersService dataset, not just local state.
+    // Complaints are NOT re-fetched here, so an assignment made locally
+    // is never wiped out by a stale mock re-fetch.
+    const interval = setInterval(async () => {
+      const workerData = await getWorkersForMap();
+      setWorkers(workerData);
+    }, 5000);
+
     return () => clearInterval(interval);
   }, []);
 

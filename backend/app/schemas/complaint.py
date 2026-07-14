@@ -31,3 +31,13 @@ class ComplaintResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---------------- ASSIGNMENT ----------------
+class ComplaintAssign(BaseModel):
+    worker_id: int
+
+
+# ---------------- STATUS UPDATE ----------------
+class ComplaintStatusUpdate(BaseModel):
+    status: str

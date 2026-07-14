@@ -1,5 +1,4 @@
 from pydantic import BaseModel, EmailStr
-<<<<<<< HEAD
 from typing import Optional
 from datetime import datetime
 
@@ -31,7 +30,6 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
-=======
 
 
 class UserCreate(BaseModel):
@@ -53,4 +51,3 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
->>>>>>> origin/main

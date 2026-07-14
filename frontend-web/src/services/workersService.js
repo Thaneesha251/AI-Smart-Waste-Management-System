@@ -67,3 +67,29 @@ export const unassignWorker = async (workerId) => {
   const response = await api.patch(`/workers/${workerId}/unassign`);
   return response.data;
 };
+
+// Add a new worker — used by the "Add Worker" button on the Workers page
+export const addWorker = async (newWorker) => {
+  if (USE_MOCK) {
+    const nextId = mockWorkers.length > 0 ? Math.max(...mockWorkers.map(w => w.id)) + 1 : 1;
+    const worker = {
+      id: nextId,
+      name: newWorker.name,
+      zone: newWorker.zone,
+      phone: newWorker.phone,
+      status: 'On Duty',
+      tasks: 0,
+      completed: 0,
+      currentTask: 'None',
+      battery: 100,
+      sos: false,
+      progress: 0,
+      lat: 11.0168 + (Math.random() - 0.5) * 0.02,
+      lng: 76.9558 + (Math.random() - 0.5) * 0.02,
+    };
+    mockWorkers = [...mockWorkers, worker];
+    return new Promise((resolve) => setTimeout(() => resolve(worker), 200));
+  }
+  const response = await api.post('/workers', newWorker);
+  return response.data;
+};

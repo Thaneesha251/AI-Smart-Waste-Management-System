@@ -1,4 +1,5 @@
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from typing import Any, Optional
 
 
@@ -11,7 +12,7 @@ def success(message: str = "Success", data: Optional[Any] = None, status_code: i
         content={
             "success": True,
             "message": message,
-            "data": data
+            "data": jsonable_encoder(data)
         }
     )
 
@@ -19,38 +20,12 @@ def success(message: str = "Success", data: Optional[Any] = None, status_code: i
 # ---------------------------
 # ERROR RESPONSE
 # ---------------------------
-def error(message: str = "Error", status_code: int = 400, data: Optional[Any] = None):
+def error(message: str = "Something went wrong", status_code: int = 400, data: Optional[Any] = None):
     return JSONResponse(
         status_code=status_code,
         content={
             "success": False,
             "message": message,
-            "data": data
-        }
-    )
-
-
-# ---------------------------
-# PAGINATED RESPONSE (optional but useful later)
-# ---------------------------
-def paginated_success(
-    message: str,
-    data: list,
-    page: int,
-    limit: int,
-    total: int
-):
-    return JSONResponse(
-        status_code=200,
-        content={
-            "success": True,
-            "message": message,
-            "data": data,
-            "pagination": {
-                "page": page,
-                "limit": limit,
-                "total": total,
-                "pages": (total // limit) + (1 if total % limit else 0)
-            }
+            "data": jsonable_encoder(data)
         }
     )
