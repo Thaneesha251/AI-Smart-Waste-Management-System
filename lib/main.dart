@@ -11,7 +11,7 @@ import 'services/voice_assistant_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   final authProvider = AuthProvider();
   final complaintProvider = ComplaintProvider();
   final locationProvider = LocationProvider();
@@ -19,13 +19,18 @@ void main() async {
   final navProvider = NavigationProvider();
   final workerProvider = WorkerProvider();
 
-  // Initialize Voice Assistant
-  await VoiceAssistantService().init();
+  try {
+    // Initialize Voice Assistant
+    await VoiceAssistantService().init();
 
-  // Initialize providers from local storage
-  await authProvider.init();
-  await complaintProvider.init();
-  await locationProvider.init();
+    // Initialize providers from local storage
+    await authProvider.init();
+    await complaintProvider.init();
+    await locationProvider.init();
+  } catch (e, st) {
+    debugPrint('Initialization error: $e');
+    debugPrintStack(stackTrace: st);
+  }
 
   runApp(
     MultiProvider(

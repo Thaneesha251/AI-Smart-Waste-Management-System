@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/glass/glass_widgets.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/gradients.dart';
+import '../../providers/navigation_provider.dart';
 
 class ConfirmationScreen extends StatelessWidget {
   const ConfirmationScreen({super.key});
@@ -32,12 +34,17 @@ class ConfirmationScreen extends StatelessWidget {
                   text: 'TRACK STATUS',
                   gradient: AppGradients.citizen,
                   onPressed: () {
+                    // Update navigation provider to point to History Tab
+                    Provider.of<NavigationProvider>(context, listen: false).setIndex(1);
                     Navigator.pushReplacementNamed(context, '/citizen-dashboard');
                   },
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/citizen-dashboard'),
+                  onPressed: () {
+                    Provider.of<NavigationProvider>(context, listen: false).setIndex(0);
+                    Navigator.pushReplacementNamed(context, '/citizen-dashboard');
+                  },
                   child: Text('BACK TO HOME', style: AppTypography.body(color: AppColors.mutedText)),
                 ),
               ],

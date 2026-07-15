@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/complaint_provider.dart';
 import '../../widgets/common/app_scaffold.dart';
 import '../../widgets/glass/glass_widgets.dart';
 import '../../core/theme/colors.dart';
@@ -36,6 +37,8 @@ class _CitizenLoginScreenState extends State<CitizenLoginScreen> {
     
     if (mounted) {
       if (error == null) {
+        // Fetch complaints after login
+        await Provider.of<ComplaintProvider>(context, listen: false).fetchComplaints();
         Navigator.pushReplacementNamed(context, '/citizen-dashboard');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

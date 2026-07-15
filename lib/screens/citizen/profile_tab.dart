@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../providers/auth_provider.dart';
+import '../../providers/complaint_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
@@ -22,6 +23,14 @@ class _ProfileTabState extends State<ProfileTab> {
   bool _notifications = true;
   File? _profileImage;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthProvider>(context, listen: false).fetchProfile();
+    });
+  }
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     try {
@@ -30,7 +39,14 @@ class _ProfileTabState extends State<ProfileTab> {
         setState(() {
           _profileImage = File(pickedFile.path);
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile picture updated Locally')));
+        
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        final updated = auth.user!.copyWith(profileImage: pickedFile.path);
+        await auth.updateProfile(updated);
+        
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile picture updated')));
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to pick image')));
@@ -91,8 +107,8 @@ class _ProfileTabState extends State<ProfileTab> {
                         CircleAvatar(
                           radius: 54,
                           backgroundColor: AppColors.primaryText,
-                          backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
-                          child: _profileImage == null ? const Icon(Icons.person, size: 54, color: Colors.white) : null,
+                          backgroundImage: user?.profileImage != null ? FileImage(File(user!.profileImage!)) : null,
+                          child: user?.profileImage == null ? const Icon(Icons.person, size: 54, color: Colors.white) : null,
                         ),
                         InkWell(
                           onTap: _pickImage,
@@ -107,6 +123,9 @@ class _ProfileTabState extends State<ProfileTab> {
                     const SizedBox(height: 20),
                     Text(user?.fullName ?? 'Sreeja', style: AppTypography.heading(fontSize: 22)),
                     Text(user?.email ?? 'sreeja@example.com', style: AppTypography.body(color: AppColors.mutedText)),
+                    const SizedBox(height: 12),
+                    if (user?.area != null) 
+                      Text(user!.area!, style: AppTypography.body(fontSize: 14, color: AppColors.citizenPrimary).copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -130,7 +149,7 @@ class _ProfileTabState extends State<ProfileTab> {
               // Settings Sections
               _buildSection('PREFERENCES', [
                 _ProfileItem(icon: Icons.person_outline, title: context.tr('edit_profile'), onTap: () => Navigator.pushNamed(context, '/edit-profile')),
-                _ProfileItem(icon: Icons.lock_outline, title: 'Change Password', onTap: () => Navigator.pushNamed(context, '/forgot-password')),
+                _ProfileItem(icon: Icons.lock_outline, title: 'Change Password', onTap: () => Navigator.pushNamed(context, '/change-password')),
                 _ProfileToggle(icon: Icons.notifications_none, title: 'Notifications', value: _notifications, onChanged: (v) => setState(() => _notifications = v)),
                 _ProfileItem(
                   icon: Icons.language_outlined, 
@@ -152,6 +171,7 @@ class _ProfileTabState extends State<ProfileTab> {
               
               TextButton(
                 onPressed: () {
+                  Provider.of<ComplaintProvider>(context, listen: false).clear();
                   auth.logout();
                   Navigator.pushNamedAndRemoveUntil(context, '/role-selection', (route) => false);
                 },

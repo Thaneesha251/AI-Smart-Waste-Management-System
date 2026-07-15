@@ -30,6 +30,7 @@ def predict_waste(
     if result["status"] == "error":
         return error(result["message"])
 
+    # Standardized response format
     return success(
         "Prediction completed",
         result["prediction"]

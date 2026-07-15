@@ -7,6 +7,7 @@ import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/gradients.dart';
 import '../../models/user_model.dart';
+import '../../core/localization/app_localization.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -19,6 +20,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
+  late TextEditingController _areaController;
+  late TextEditingController _addressController;
 
   @override
   void initState() {
@@ -26,6 +29,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = Provider.of<AuthProvider>(context, listen: false).user;
     _nameController = TextEditingController(text: user?.fullName);
     _phoneController = TextEditingController(text: user?.phone);
+    _areaController = TextEditingController(text: user?.area);
+    _addressController = TextEditingController(text: user?.address);
   }
 
   void _handleSave() async {
@@ -33,13 +38,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final user = auth.user!;
       
-      final updatedUser = User(
+      final updatedUser = user.copyWith(
         fullName: _nameController.text.trim(),
-        email: user.email,
         phone: _phoneController.text.trim(),
-        password: user.password,
-        role: user.role,
-        profileImage: user.profileImage,
+        area: _areaController.text.trim(),
+        address: _addressController.text.trim(),
       );
 
       await auth.updateProfile(updatedUser);
@@ -57,7 +60,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       appBar: AppBar(
-        title: Text('Edit Profile', style: AppTypography.heading(fontSize: 18)),
+        title: Text(context.tr('edit_profile'), style: AppTypography.heading(fontSize: 18)),
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => Navigator.pop(context)),
       ),
       body: SafeArea(
@@ -72,20 +75,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline)),
+                        decoration: InputDecoration(labelText: context.tr('full_name'), prefixIcon: const Icon(Icons.person_outline)),
                         validator: (v) => v!.isEmpty ? 'Enter your name' : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _phoneController,
-                        decoration: const InputDecoration(labelText: 'Phone Number', prefixIcon: Icon(Icons.phone_outlined)),
+                        decoration: InputDecoration(labelText: context.tr('phone'), prefixIcon: const Icon(Icons.phone_outlined)),
                         keyboardType: TextInputType.phone,
                         validator: (v) => v!.length < 10 ? 'Enter valid phone' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _areaController,
+                        decoration: const InputDecoration(labelText: 'Area', prefixIcon: Icon(Icons.location_city_outlined)),
+                        validator: (v) => v!.isEmpty ? 'Enter your area' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _addressController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(labelText: 'Detailed Address', prefixIcon: Icon(Icons.home_outlined)),
+                        validator: (v) => v!.isEmpty ? 'Enter your address' : null,
                       ),
                       const SizedBox(height: 32),
                       GlassButton(
                         text: 'SAVE CHANGES',
                         gradient: AppGradients.citizen,
+                        isLoading: Provider.of<AuthProvider>(context).isLoading,
                         onPressed: _handleSave,
                       ),
                     ],

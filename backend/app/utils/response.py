@@ -1,4 +1,5 @@
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from typing import Any, Optional
 
 
@@ -8,11 +9,11 @@ from typing import Any, Optional
 def success(message: str = "Success", data: Optional[Any] = None, status_code: int = 200):
     return JSONResponse(
         status_code=status_code,
-        content={
+        content=jsonable_encoder({
             "success": True,
             "message": message,
             "data": data
-        }
+        })
     )
 
 
@@ -22,11 +23,11 @@ def success(message: str = "Success", data: Optional[Any] = None, status_code: i
 def error(message: str = "Error", status_code: int = 400, data: Optional[Any] = None):
     return JSONResponse(
         status_code=status_code,
-        content={
+        content=jsonable_encoder({
             "success": False,
             "message": message,
             "data": data
-        }
+        })
     )
 
 

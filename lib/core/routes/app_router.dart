@@ -19,6 +19,8 @@ import '../../screens/citizen/help_center_screen.dart';
 import '../../screens/citizen/feedback_screen.dart';
 import '../../screens/citizen/confirmation_screen.dart';
 import '../../screens/citizen/complaint_history_screen.dart';
+import '../../screens/citizen/change_password_screen.dart';
+import '../../screens/auth/reset_password_screen.dart';
 import '../../screens/worker/worker_dashboard.dart';
 import '../../screens/worker/worker_profile_screen.dart';
 import '../../screens/worker/assigned_tasks_screen.dart';
@@ -42,6 +44,10 @@ class AppRouter {
     '/map-selection': (context) => const MapSelectionScreen(),
     '/create-complaint': (context) => const CreateComplaintScreen(),
     '/edit-profile': (context) => const EditProfileScreen(),
+    '/change-password': (context) => const ChangePasswordScreen(),
+    '/reset-password': (context) => ResetPasswordScreen(
+          email: ModalRoute.of(context)!.settings.arguments as String,
+        ),
     '/privacy-policy': (context) => const PrivacyPolicyScreen(),
     '/about': (context) => const AboutScreen(),
     '/contact-us': (context) => const ContactUsScreen(),

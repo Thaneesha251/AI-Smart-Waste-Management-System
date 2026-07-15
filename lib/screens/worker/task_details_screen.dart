@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../models/complaint.dart';
 import '../../providers/worker_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../core/theme/colors.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/gradients.dart';
@@ -51,7 +52,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     await Future.delayed(const Duration(seconds: 2));
     
     if (mounted) {
-      await Provider.of<WorkerProvider>(context, listen: false).completeTask(widget.task.id, _afterImage!.path);
+      if (widget.task.id != null) {
+        await Provider.of<WorkerProvider>(context, listen: false).completeTask(widget.task.id!, _afterImage!.path);
+      }
       setState(() => _isUploading = false);
       // Voice strictly in Tamil
       await _voiceService.announceCompletion();
@@ -84,7 +87,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       appBar: AppBar(
-        title: Text('Task #${widget.task.id.substring(0, 4)}', style: AppTypography.heading(fontSize: 18)),
+        title: Text('Task #${widget.task.id?.toString().substring(0, 4) ?? "----"}', style: AppTypography.heading(fontSize: 18)),
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => Navigator.pop(context)),
       ),
       body: SafeArea(
@@ -186,14 +189,27 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   Widget _buildImagePlaceholder(String? url, String label) {
+    if (url == null) {
+      return Container(
+        height: 200, width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.disabled.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(child: Text(label, style: AppTypography.body(color: AppColors.disabled))),
+      );
+    }
+
+    final isLocal = !url.startsWith('http');
     return Container(
       height: 200, width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.disabled.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        image: url != null ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover) : null,
+        image: DecorationImage(
+          image: isLocal ? FileImage(File(url)) : NetworkImage(url) as ImageProvider,
+          fit: BoxFit.cover,
+        ),
       ),
-      child: url == null ? Center(child: Text(label, style: AppTypography.body(color: AppColors.disabled))) : null,
     );
   }
 

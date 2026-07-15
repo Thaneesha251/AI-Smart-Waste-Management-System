@@ -10,7 +10,7 @@ class WorkerProvider with ChangeNotifier {
   bool _isOnDuty = false;
   List<Complaint> _tasks = [];
   bool _isLoading = false;
-  String? _lastAnnouncedTaskId;
+  int? _lastAnnouncedTaskId;
 
   bool get isOnDuty => _isOnDuty;
   List<Complaint> get tasks => _tasks;
@@ -33,6 +33,8 @@ class WorkerProvider with ChangeNotifier {
     try {
       _tasks = await _complaintService.getWorkerTasks();
       _checkForNewTasks();
+    } catch (e) {
+      print('Worker Fetch Error: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -52,7 +54,7 @@ class WorkerProvider with ChangeNotifier {
     }
   }
 
-  Future<void> completeTask(String taskId, String afterImageUrl) async {
+  Future<void> completeTask(int taskId, String afterImageUrl) async {
     final index = _tasks.indexWhere((t) => t.id == taskId);
     if (index != -1) {
       _tasks[index] = _tasks[index].copyWith(

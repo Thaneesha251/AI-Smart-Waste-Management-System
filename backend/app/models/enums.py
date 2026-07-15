@@ -3,6 +3,7 @@ import enum
 
 class ComplaintStatus(str, enum.Enum):
     PENDING = "pending"
-    IN_PROGRESS = "in_progress"
+    ASSIGNED = "assigned"
+    IN_PROGRESS = "inProgress"
     RESOLVED = "resolved"
-    REJECTED = "rejected"
+    CANCELLED = "cancelled"

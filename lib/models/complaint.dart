@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 enum ComplaintStatus { pending, assigned, inProgress, resolved, cancelled }
 
 class Complaint {
-  final String id;
+  final int? id;
   final String title;
   final String description;
   final String location;
@@ -15,11 +15,11 @@ class Complaint {
   final DateTime createdAt;
   final String assignedAuthority;
   final DateTime expectedResolution;
-  final String? imageUrl; // Local file path or network URL
+  final String? imageUrl;
   final String? afterImageUrl;
 
   Complaint({
-    required this.id,
+    this.id,
     required this.title,
     required this.description,
     required this.location,
@@ -64,7 +64,7 @@ class Complaint {
   }
 
   Complaint copyWith({
-    String? id,
+    int? id,
     String? title,
     String? description,
     String? location,
@@ -117,21 +117,51 @@ class Complaint {
   }
 
   factory Complaint.fromJson(Map<String, dynamic> json) {
+    ComplaintStatus parseStatus(dynamic status) {
+      if (status == null) return ComplaintStatus.pending;
+      if (status is int) {
+        if (status >= 0 && status < ComplaintStatus.values.length) {
+          return ComplaintStatus.values[status];
+        }
+        return ComplaintStatus.pending;
+      }
+      if (status is String) {
+        switch (status.toLowerCase()) {
+          case 'pending': return ComplaintStatus.pending;
+          case 'assigned': return ComplaintStatus.assigned;
+          case 'inprogress': return ComplaintStatus.inProgress;
+          case 'resolved': return ComplaintStatus.resolved;
+          case 'cancelled': return ComplaintStatus.cancelled;
+          default: return ComplaintStatus.pending;
+        }
+      }
+      return ComplaintStatus.pending;
+    }
+
+    DateTime parseDate(dynamic date) {
+      if (date == null) return DateTime.now();
+      try {
+        return DateTime.parse(date.toString());
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+
     return Complaint(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      location: json['location'],
-      area: json['area'],
-      zone: json['zone'],
-      status: ComplaintStatus.values[json['status']],
-      priority: json['priority'],
-      wasteType: json['wasteType'],
-      createdAt: DateTime.parse(json['createdAt']),
-      assignedAuthority: json['assignedAuthority'],
-      expectedResolution: DateTime.parse(json['expectedResolution']),
-      imageUrl: json['imageUrl'],
-      afterImageUrl: json['afterImageUrl'],
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? ''),
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      location: json['location'] as String? ?? 'Unknown',
+      area: json['area'] as String? ?? 'Unknown',
+      zone: json['zone'] as String? ?? 'Unknown',
+      status: parseStatus(json['status']),
+      priority: json['priority'] as String? ?? 'Medium',
+      wasteType: json['wasteType'] as String? ?? 'General',
+      createdAt: parseDate(json['created_at'] ?? json['createdAt']),
+      assignedAuthority: json['assignedAuthority'] as String? ?? 'City Municipality',
+      expectedResolution: parseDate(json['expectedResolution'] ?? json['updated_at']),
+      imageUrl: json['imageUrl'] as String?,
+      afterImageUrl: json['afterImageUrl'] as String?,
     );
   }
 }

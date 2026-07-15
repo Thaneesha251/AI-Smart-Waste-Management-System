@@ -1,16 +1,18 @@
 class AppConstants {
-  static const String appName = 'SwachhAI';
-
-  // Use 10.0.2.2 for Android Emulator to access localhost
+  // API Configuration
   static const String apiBaseUrl =
-      'http://10.0.2.2:8000'; // Base url changed to root per api requirements: /login, /register, /complaints/create, etc.
+      'http:// 192.168.77.214:8000/api/v1';
 
-  // Explicit Mock Fallback Switch (if true, will fallback to mocks if API fails)
-  static const bool useMockFallback = true;
+  // Authentication
+  static const String tokenKey = 'auth_token';
+
+  // App Information
+  static const String appName = 'AI Smart Waste Management';
 
   // Storage Keys
-  static const String tokenKey = 'access_token';
-  static const String userIdKey = 'user_id';
-  static const String userRoleKey = 'user_role';
-  static const String usernameKey = 'username';
+  static const String userDataKey = 'user_data';
+  static const String complaintsKey = 'complaints_data';
+
+  // Request Timeout
+  static const int requestTimeout = 30;
 }

@@ -5,16 +5,23 @@ from app.models.complaint import Complaint
 from app.models.enums import ComplaintStatus
 
 
+from app.schemas.complaint import ComplaintCreate
+
 # ---------------------------
 # CREATE COMPLAINT
 # ---------------------------
-def create_complaint(db: Session, user_id: int, title: str, description: str):
+def create_complaint(db: Session, user_id: int, data: ComplaintCreate):
     complaint = Complaint(
         user_id=user_id,
-        title=title,
-        description=description,
-        status=ComplaintStatus.PENDING.value,
-        created_at=datetime.utcnow()
+        title=data.title,
+        description=data.description,
+        location=data.location,
+        area=data.area,
+        zone=data.zone,
+        priority=data.priority,
+        wasteType=data.wasteType,
+        imageUrl=data.imageUrl,
+        status=ComplaintStatus.PENDING.value
     )
 
     db.add(complaint)
@@ -28,48 +35,23 @@ def create_complaint(db: Session, user_id: int, title: str, description: str):
 # GET USER COMPLAINTS
 # ---------------------------
 def get_user_complaints(db: Session, user_id: int):
-    complaints = (
+    return (
         db.query(Complaint)
         .filter(Complaint.user_id == user_id)
         .order_by(Complaint.created_at.desc())
         .all()
     )
 
-    return [
-        {
-            "id": c.id,
-            "title": c.title,
-            "description": c.description,
-            "status": c.status,
-            "created_at": c.created_at,
-            "updated_at": c.updated_at
-        }
-        for c in complaints
-    ]
-
 
 # ---------------------------
-# GET ALL COMPLAINTS (ADMIN)
+# GET ALL COMPLAINTS (ADMIN/WORKER)
 # ---------------------------
 def get_all_complaints(db: Session):
-    complaints = (
+    return (
         db.query(Complaint)
         .order_by(Complaint.created_at.desc())
         .all()
     )
-
-    return [
-        {
-            "id": c.id,
-            "user_id": c.user_id,
-            "title": c.title,
-            "description": c.description,
-            "status": c.status,
-            "created_at": c.created_at,
-            "updated_at": c.updated_at
-        }
-        for c in complaints
-    ]
 
 
 # ---------------------------

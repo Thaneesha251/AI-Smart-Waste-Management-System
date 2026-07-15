@@ -47,7 +47,6 @@ class _CreateComplaintScreenState extends State<CreateComplaintScreen> {
     final loc = Provider.of<LocationProvider>(context, listen: false);
     
     final newComplaint = Complaint(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleController.text.trim(),
       description: _descController.text.trim(),
       location: loc.city,
@@ -59,12 +58,20 @@ class _CreateComplaintScreenState extends State<CreateComplaintScreen> {
       createdAt: DateTime.now(),
       assignedAuthority: 'City Municipality',
       expectedResolution: DateTime.now().add(const Duration(days: 3)),
+      imageUrl: _image?.path,
     );
 
-    await Provider.of<ComplaintProvider>(context, listen: false).addComplaint(newComplaint);
-
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/confirmation');
+    try {
+      await Provider.of<ComplaintProvider>(context, listen: false).addComplaint(newComplaint);
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/confirmation');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Submission Error: $e')),
+        );
+      }
     }
   }
 
@@ -162,7 +169,7 @@ class _InfoItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: AppTypography.eyebrow(fontSize: 9)),
-              Text(value, style: AppTypography.body(fontSize: 14, color: color ?? AppColors.primaryText).copyWith(fontWeight: FontWeight.w600)),
+              Text(value, style: AppTypography.body().copyWith(fontSize: 14, color: color ?? AppColors.primaryText, fontWeight: FontWeight.w600)),
             ],
           ),
         ),

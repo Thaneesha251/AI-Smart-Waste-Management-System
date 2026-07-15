@@ -1,45 +1,63 @@
-import '../models/user_model.dart';
 import 'api_service.dart';
 
 class AuthService {
   final ApiService _apiService = ApiService();
 
-  Future<Map<String, dynamic>> login(String username, String password) async {
-    try {
-      final response = await _apiService.post('/auth/login', {
-        'username': username,
-        'password': password,
-      });
-      return response;
-    } catch (e) {
-      // Mock for development if backend not running
-      if (username == 'citizen' && password == 'password') {
-        return {
-          'user_id': 1,
-          'username': 'citizen',
-          'role': 'citizen',
-          'message': 'Login successful (Mock)'
-        };
-      } else if (username == 'worker' && password == 'password') {
-        return {
-          'user_id': 2,
-          'username': 'worker',
-          'role': 'worker',
-          'message': 'Login successful (Mock)'
-        };
-      }
-      rethrow;
-    }
-  }
-
-  Future<User> register(
-      String username, String email, String password, UserRole role) async {
-    final response = await _apiService.post('/auth/register', {
-      'username': username,
+  // Login
+  Future<Map<String, dynamic>> login(
+      String email, String password) async {
+    final response = await _apiService.post('/auth/login', {
       'email': email,
       'password': password,
-      'role': role.toString().split('.').last,
     });
-    return User.fromJson(response);
+    return Map<String, dynamic>.from(response);
+  }
+
+  // Register
+  Future<Map<String, dynamic>> register(
+      String fullName,
+      String email,
+      String password,
+      String phone,
+      String role,
+      ) async {
+    final response = await _apiService.post('/auth/register', {
+      'fullName': fullName,
+      'email': email,
+      'password': password,
+      'phone': phone,
+      'role': role,
+    });
+    return Map<String, dynamic>.from(response);
+  }
+
+  // Get logged-in user profile
+  Future<Map<String, dynamic>> getProfile() async {
+    final response = await _apiService.get('/users/me');
+    return Map<String, dynamic>.from(response);
+  }
+
+  // Update logged-in user profile
+  Future<Map<String, dynamic>> updateProfile(
+      Map<String, dynamic> data) async {
+    final response = await _apiService.put('/users/me', data);
+    return Map<String, dynamic>.from(response);
+  }
+
+  // Temporary placeholder until backend route is implemented
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    return {
+      'success': false,
+      'message': 'Forgot password feature not implemented yet'
+    };
+  }
+
+  // Temporary placeholder until backend route is implemented
+  Future<Map<String, dynamic>> resetPassword(
+      String token, String newPassword) async {
+    return {
+      'success': false,
+      'message': 'Reset password feature not implemented yet'
+    };
   }
 }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -6,6 +6,7 @@ from app.core.dependencies import get_current_user
 from app.core.rbac import require_admin
 
 from app.models.user import User
+from app.models.complaint import Complaint, ComplaintStatus
 from app.services.complaint_service import (
     create_complaint,
     get_user_complaints,
@@ -15,7 +16,9 @@ from app.services.complaint_service import (
 
 from app.utils.response import success, error
 
-router = APIRouter(prefix="/complaints", tags=["Complaints"])
+from app.schemas.complaint import ComplaintCreate, ComplaintResponse, ComplaintUpdate
+
+router = APIRouter(prefix="", tags=["Complaints"])
 
 
 # ---------------------------
@@ -23,20 +26,15 @@ router = APIRouter(prefix="/complaints", tags=["Complaints"])
 # ---------------------------
 @router.post("/create")
 def create(
-    title: str,
-    description: str,
+    data: ComplaintCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    complaint = create_complaint(db, user.id, title, description)
+    complaint = create_complaint(db, user.id, data)
 
     return success(
         "Complaint created successfully",
-        {
-            "id": complaint.id,
-            "title": complaint.title,
-            "status": complaint.status
-        }
+        ComplaintResponse.from_orm(complaint).dict()
     )
 
 
@@ -49,19 +47,78 @@ def my_complaints(
     user: User = Depends(get_current_user)
 ):
     complaints = get_user_complaints(db, user.id)
-    return success("User complaints fetched", complaints)
+    return success("User complaints fetched", [ComplaintResponse.from_orm(c).dict() for c in complaints])
 
 
 # ---------------------------
-# ADMIN - GET ALL COMPLAINTS
+# ADMIN/WORKER - GET ALL COMPLAINTS
 # ---------------------------
 @router.get("/all")
 def all_complaints(
     db: Session = Depends(get_db),
-    user: User = Depends(require_admin)
+    user: User = Depends(get_current_user)
 ):
+    if user.role not in ["admin", "worker", "municipality"]:
+        return error("Unauthorized access", status_code=403)
+
     complaints = get_all_complaints(db)
-    return success("All complaints fetched", complaints)
+    return success("All complaints fetched", [ComplaintResponse.from_orm(c).dict() for c in complaints])
+
+
+# ---------------------------
+# UPDATE COMPLAINT (USER)
+# ---------------------------
+@router.put("/update/{complaint_id}")
+def update(
+    complaint_id: int,
+    data: ComplaintUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+
+    if not complaint:
+        return error("Complaint not found", status_code=404)
+
+    if complaint.user_id != user.id:
+        return error("Unauthorized to update this complaint", status_code=403)
+
+    # Apply updates
+    update_data = data.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(complaint, key, value)
+
+    db.commit()
+    db.refresh(complaint)
+
+    return success("Complaint updated successfully", ComplaintResponse.from_orm(complaint).dict())
+
+
+# ---------------------------
+# CANCEL COMPLAINT (USER)
+# ---------------------------
+@router.put("/cancel/{complaint_id}")
+def cancel_complaint(
+    complaint_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+
+    if not complaint:
+        return error("Complaint not found", status_code=404)
+
+    if complaint.user_id != user.id:
+        return error("Unauthorized to cancel this complaint", status_code=403)
+
+    if complaint.status != ComplaintStatus.PENDING.value:
+        return error("Only pending complaints can be cancelled", status_code=400)
+
+    complaint.status = ComplaintStatus.CANCELLED.value
+    db.commit()
+    db.refresh(complaint)
+
+    return success("Complaint cancelled successfully", ComplaintResponse.from_orm(complaint).dict())
 
 
 # ---------------------------

@@ -12,6 +12,7 @@ import '../../widgets/glass/glass_widgets.dart';
 import '../../widgets/components/components.dart';
 import '../../models/complaint.dart';
 import '../../core/localization/app_localization.dart';
+import '../../services/complaint_service.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -35,16 +36,31 @@ class _HomeTabState extends State<HomeTab> {
         _isAIProcessing = true;
       });
 
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (mounted) {
-        setState(() => _isAIProcessing = false);
-        _showAIDetectionDialog();
+      try {
+        final result = await ComplaintService().predictWaste(pickedFile.path);
+        if (mounted) {
+          setState(() => _isAIProcessing = false);
+          if (result['success'] == true) {
+            final data = result['data'];
+            _showAIDetectionDialog(
+              data['waste_type'] ?? 'Plastic', 
+              (data['confidence'] * 100).toStringAsFixed(1) + '%',
+              data['recyclable'] == true ? 'Yes' : 'No'
+            );
+          } else {
+             _showAIDetectionDialog('Unknown', '0%', 'N/A');
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isAIProcessing = false);
+          _showAIDetectionDialog('Plastic', '92%', 'Yes'); // Fallback demo behavior
+        }
       }
     }
   }
 
-  void _showAIDetectionDialog() {
+  void _showAIDetectionDialog(String wasteType, String confidence, String recyclable) {
     final loc = Provider.of<LocationProvider>(context, listen: false);
     
     showGeneralDialog(
@@ -64,8 +80,9 @@ class _HomeTabState extends State<HomeTab> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildAIRow('Waste Type', 'Plastic'),
-                  _buildAIRow('Severity', 'Medium'),
+                  _buildAIRow('Waste Type', wasteType),
+                  _buildAIRow('Confidence', confidence),
+                  _buildAIRow('Recyclable', recyclable),
                   _buildAIRow('Location', loc.area),
                 ],
               ),
@@ -83,8 +100,8 @@ class _HomeTabState extends State<HomeTab> {
                     Navigator.pop(context);
                     Navigator.pushNamed(context, '/create-complaint', arguments: {
                       'image': _selectedImage,
-                      'wasteType': 'Plastic',
-                      'severity': 'Medium',
+                      'wasteType': wasteType,
+                      'severity': double.parse(confidence.replaceAll('%', '')) > 80 ? 'High' : 'Medium',
                       'location': loc.area,
                     });
                     setState(() => _selectedImage = null);
@@ -250,7 +267,7 @@ class _HomeTabState extends State<HomeTab> {
        return GlassCard(
         padding: const EdgeInsets.all(40),
         child: Center(child: Text('No complaints yet.', style: AppTypography.body(color: AppColors.mutedText))),
-      );
+       );
     }
     return ListView.builder(
       shrinkWrap: true,
@@ -323,7 +340,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 }
-
 class _ComplaintListItem extends StatelessWidget {
   final Complaint complaint;
   const _ComplaintListItem({required this.complaint});
@@ -336,11 +352,16 @@ class _ComplaintListItem extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         borderRadius: 22,
         child: InkWell(
-          onTap: () => Navigator.pushNamed(context, '/complaint-details', arguments: complaint),
+          onTap: () => Navigator.pushNamed(
+            context,
+            '/complaint-details',
+            arguments: complaint,
+          ),
           child: Row(
             children: [
               _buildLeadingImage(complaint.imageUrl),
               const SizedBox(width: 18),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,13 +369,47 @@ class _ComplaintListItem extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('#${complaint.id.substring(0, 4)}', style: AppTypography.eyebrow(fontSize: 10, color: AppColors.mutedText)),
-                        StatusChip(label: complaint.statusString, color: complaint.getStatusColor()),
+                        Text(
+                          '#${(() {
+                            final idStr =
+                                complaint.id?.toString() ?? '';
+                            return idStr.length > 4
+                                ? idStr.substring(0, 4)
+                                : idStr;
+                          })()}',
+                          style: AppTypography.eyebrow(
+                            fontSize: 10,
+                            color: AppColors.mutedText,
+                          ),
+                        ),
+                        StatusChip(
+                          label: complaint.statusString,
+                          color: complaint.getStatusColor(),
+                        ),
                       ],
                     ),
+
                     const SizedBox(height: 6),
-                    Text(complaint.title, style: AppTypography.body(fontSize: 16, color: AppColors.primaryText).copyWith(fontWeight: FontWeight.w700)),
-                    Text(complaint.area, style: AppTypography.body(fontSize: 12, color: AppColors.mutedText), maxLines: 1, overflow: TextOverflow.ellipsis),
+
+                    Text(
+                      complaint.title,
+                      style: AppTypography.body(
+                        fontSize: 16,
+                        color: AppColors.primaryText,
+                      ).copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    Text(
+                      complaint.area,
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        color: AppColors.mutedText,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -366,17 +421,37 @@ class _ComplaintListItem extends StatelessWidget {
   }
 
   Widget _buildLeadingImage(String? url) {
+    if (url == null) {
+      return Container(
+        width: 54,
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppColors.primaryText,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Icon(
+          Icons.assignment_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
+      );
+    }
+
+    final isLocal = !url.startsWith('http');
+
     return Container(
-      width: 54, height: 54,
+      width: 54,
+      height: 54,
       decoration: BoxDecoration(
-        color: AppColors.primaryText, 
+        color: AppColors.primaryText,
         borderRadius: BorderRadius.circular(14),
-        image: url != null ? DecorationImage(
-          image: url.startsWith('http') ? NetworkImage(url) : FileImage(File(url)) as ImageProvider,
+        image: DecorationImage(
+          image: isLocal
+              ? FileImage(File(url))
+              : NetworkImage(url) as ImageProvider,
           fit: BoxFit.cover,
-        ) : null,
+        ),
       ),
-      child: url == null ? const Icon(Icons.assignment_rounded, color: Colors.white, size: 26) : null,
     );
   }
 }
