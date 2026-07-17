@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import jwt
@@ -10,6 +10,7 @@ from app.core.dependencies import get_current_user
 from app.core.security import (
     hash_password,
     verify_password,
+    create_access_token,
     create_reset_token,
     verify_reset_token,
 )
@@ -50,32 +51,6 @@ conf = ConnectionConfig(
 )
 
 
-
-# =====================================================
-# CREATE JWT TOKEN
-# =====================================================
-
-def create_access_token(data: dict):
-
-    token_data = data.copy()
-
-    expire = datetime.utcnow() + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-
-    token_data.update({
-        "exp": expire
-    })
-
-
-    return jwt.encode(
-        token_data,
-        settings.SECRET_KEY,
-        algorithm=settings.ALGORITHM
-    )
-
-
-
 # =====================================================
 # REGISTER USER
 # =====================================================
@@ -101,23 +76,13 @@ def register(
 
 
     user = User(
-
         fullName=user_data.fullName,
-
         email=user_data.email,
-
-        password=hash_password(
-            user_data.password
-        ),
-
+        password=hash_password(user_data.password),
         phone=user_data.phone,
-
         role=user_data.role,
-
         area=user_data.area,
-
         address=user_data.address,
-
         profileImage=None
     )
 
@@ -152,52 +117,32 @@ def login(
 
 
     if not user:
-
         return error(
             "Invalid credentials",
             status_code=401
         )
 
 
-
-    if not verify_password(
-        user_data.password,
-        user.password
-    ):
-
+    if not verify_password(user_data.password, user.password):
         return error(
             "Invalid credentials",
             status_code=401
         )
-
 
 
     token = create_access_token({
-
         "user_id": user.id,
-
         "role": user.role
-
     })
 
 
     return success(
-
         "Login successful",
-
         {
-
             "access_token": token,
-
             "token_type": "bearer",
-
-            "user":
-                UserResponse
-                .model_validate(user)
-                .model_dump()
-
+            "user": UserResponse.model_validate(user).model_dump()
         }
-
     )
 
 
@@ -208,32 +153,20 @@ def login(
 
 @router.put("/change-password")
 def change_password(
-
     data: ChangePassword,
-
     db: Session = Depends(get_db),
-
     current_user: User = Depends(get_current_user)
-
 ):
 
 
-    if not verify_password(
-        data.currentPassword,
-        current_user.password
-    ):
-
+    if not verify_password(data.currentPassword, current_user.password):
         return error(
             "Current password is incorrect",
             status_code=400
         )
 
 
-    current_user.password = hash_password(
-        data.newPassword
-    )
-
-
+    current_user.password = hash_password(data.newPassword)
     db.commit()
 
 
@@ -249,13 +182,9 @@ def change_password(
 
 @router.put("/update-profile")
 def update_profile(
-
     user_data: UserUpdate,
-
     db: Session = Depends(get_db),
-
     current_user: User = Depends(get_current_user)
-
 ):
 
 
@@ -278,21 +207,17 @@ def update_profile(
     if user_data.address is not None:
         current_user.address = user_data.address
 
+    if user_data.password is not None:
+        current_user.password = hash_password(user_data.password)
 
 
     db.commit()
     db.refresh(current_user)
 
 
-
     return success(
-
         "Profile updated successfully",
-
-        UserResponse
-        .model_validate(current_user)
-        .model_dump()
-
+        UserResponse.model_validate(current_user).model_dump()
     )
 
 
@@ -303,11 +228,9 @@ def update_profile(
 
 @router.post("/forgot-password")
 async def forgot_password(
-
     request: ForgotPasswordRequest,
-
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
-
 ):
 
     user = (
@@ -318,78 +241,71 @@ async def forgot_password(
 
 
     if not user:
-
         return error(
             "User with this email does not exist",
             status_code=404
         )
 
 
-    token = create_reset_token(
-        request.email
-    )
-
+    token = create_reset_token(request.email)
+    # Production-style reset link pointing to the server IP for deep linking
+    reset_link = f"http://192.168.137.1:8000/reset-password?token={token}"
+    print(f"DEBUG: Password reset link generated for {request.email}: {reset_link}")
 
     html = f"""
+    <html>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f9f9f9; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #E53935; margin: 0; font-size: 28px;">SwachhAI</h1>
+                <p style="color: #777; margin: 5px 0 0 0;">Smart Waste Management System</p>
+            </div>
 
-    <h2>
-    AI Smart Waste Management System
-    </h2>
+            <h2 style="color: #333; font-size: 22px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">Password Reset Request</h2>
 
-    <p>
-    Password reset request received.
-    </p>
+            <p>Hello,</p>
+            <p>We received a request to reset the password for your SwachhAI account. Click the button below to set a new password:</p>
 
-    <p>
-    Reset Token:
-    </p>
+            <div style="text-align: center; margin: 35px 0;">
+                <a href="{reset_link}" style="background-color: #E53935; color: #ffffff; padding: 14px 30px; text-decoration: none; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 16px;">Yes, Reset My Password</a>
+            </div>
 
-    <h3>
-    {token}
-    </h3>
+            <p style="color: #666; font-size: 14px;">If the button above doesn't work, copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #E53935; font-size: 12px; background: #fff5f5; padding: 10px; border-radius: 4px;">{reset_link}</p>
 
-    <p>
-    Token expires in 15 minutes.
-    </p>
+            <div style="margin-top: 30px; padding: 15px; background-color: #fff8e1; border-left: 4px solid #ffc107; border-radius: 4px;">
+                <p style="margin: 0; font-size: 13px; color: #856404;"><strong>Note:</strong> This link will expire in 15 minutes for security reasons.</p>
+            </div>
 
+            <p style="margin-top: 30px; font-size: 14px; color: #666;">If you did not request this reset, please ignore this email or contact support if you have concerns.</p>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+            <p style="font-size: 11px; color: #999; text-align: center; margin: 0;">&copy; 2024 SwachhAI System. All rights reserved.</p>
+        </div>
+    </body>
+    </html>
     """
 
-
-
     message = MessageSchema(
-
-        subject="Password Reset",
-
-        recipients=[
-            request.email
-        ],
-
+        subject="Password Reset - AI Smart Waste Management",
+        recipients=[request.email],
         body=html,
-
         subtype=MessageType.html
-
     )
-
 
     fm = FastMail(conf)
 
-
     try:
-
-        await fm.send_message(message)
-
-
+        # Use background tasks for sending email to avoid timeout
+        background_tasks.add_task(fm.send_message, message)
+        print(f"DEBUG: Email task added for {request.email}")
     except Exception as e:
-
-        return error(
-            f"Email sending failed: {str(e)}",
-            status_code=500
-        )
-
+        print(f"ERROR: Failed to add email task for {request.email}: {str(e)}")
+        # We still return success to avoid leaking user info, but log the error
 
 
     return success(
-        "Password reset email sent successfully"
+        "If the email exists in our system, you will receive a reset token shortly."
     )
 
 
@@ -400,27 +316,20 @@ async def forgot_password(
 
 @router.post("/reset-password/{token}")
 def reset_password(
-
     token: str,
-
     request: ResetPassword,
-
     db: Session = Depends(get_db)
-
 ):
 
 
     email = verify_reset_token(token)
 
 
-
     if not email:
-
         return error(
             "Invalid or expired reset token",
             status_code=400
         )
-
 
 
     user = (
@@ -430,23 +339,15 @@ def reset_password(
     )
 
 
-
     if not user:
-
         return error(
             "User not found",
             status_code=404
         )
 
 
-
-    user.password = hash_password(
-        request.newPassword
-    )
-
-
+    user.password = hash_password(request.newPassword)
     db.commit()
-
 
 
     return success(

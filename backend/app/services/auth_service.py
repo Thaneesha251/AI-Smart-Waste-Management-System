@@ -3,10 +3,13 @@ from app.models.user import User
 
 def register_user(db, user_data):
     user = User(
-        name=user_data.name,
+        fullName=user_data.fullName,
         email=user_data.email,
         password=hash_password(user_data.password),
-        role="user"
+        phone=user_data.phone,
+        role=user_data.role,
+        area=user_data.area,
+        address=user_data.address
     )
     db.add(user)
     db.commit()

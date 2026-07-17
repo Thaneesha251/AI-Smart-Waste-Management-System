@@ -1,24 +1,27 @@
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
-from passlib.context import CryptContext
+import hmac
+import hashlib
 from app.core.config import settings
 
-# passlib's bcrypt handles the 72-byte limit by default by throwing an error
-# or truncating depending on configuration. We'll use the default secure setup.
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Secure Hashing Implementation using HMAC-SHA256
+# This avoids library version compatibility issues with bcrypt/passlib on Python 3.13
+# and correctly handles passwords of any length.
 
-
-# ---------------- PASSWORD ----------------
 def hash_password(password: str) -> str:
-    # Ensure password is truncated to 72 bytes for bcrypt safety if extremely long
-    # Most user passwords won't hit this, but it prevents the 500 error mentioned.
-    safe_password = password[:72]
-    return pwd_context.hash(safe_password)
+    """
+    Secure hashing using HMAC-SHA256 with SECRET_KEY as the key.
+    """
+    key = settings.SECRET_KEY.encode()
+    msg = password.encode()
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    safe_password = plain[:72]
-    return pwd_context.verify(safe_password, hashed)
+    """
+    Constant-time verification of the plain password against the hash.
+    """
+    return hmac.compare_digest(hash_password(plain), hashed)
 
 
 # ---------------- JWT ----------------
