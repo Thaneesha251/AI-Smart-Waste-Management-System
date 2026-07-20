@@ -16,7 +16,6 @@ const LiveTracking = () => {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // Initial load — fetch fresh complaints + workers
     const loadInitial = async () => {
       const complaintData = await getComplaints();
       const workerData = await getWorkersForMap();
@@ -25,11 +24,6 @@ const LiveTracking = () => {
     };
     loadInitial();
 
-    // Poll workers every 5 seconds for live GPS movement — this is safe
-    // to overwrite since worker assignment state (currentTask) already
-    // lives in the shared workersService dataset, not just local state.
-    // Complaints are NOT re-fetched here, so an assignment made locally
-    // is never wiped out by a stale mock re-fetch.
     const interval = setInterval(async () => {
       const workerData = await getWorkersForMap();
       setWorkers(workerData);
@@ -40,22 +34,20 @@ const LiveTracking = () => {
 
   const idleWorkers = useMemo(() => workers.filter((worker) => worker.currentTask === 'None'), [workers]);
 
-  // Filters complaints by ID (with or without #), location, or waste type
   const filteredComplaints = useMemo(() => {
     const term = search.replace('#', '').toLowerCase().trim();
     if (!term) return complaints;
     return complaints.filter((item) =>
-      item.id.toLowerCase().replace('#', '').includes(term) ||
-      item.location.toLowerCase().includes(term) ||
-      item.type.toLowerCase().includes(term)
+      String(item.id).toLowerCase().replace('#', '').includes(term) ||
+      (item.location || '').toLowerCase().includes(term) ||
+      (item.type || '').toLowerCase().includes(term)
     );
   }, [complaints, search]);
 
-  // Filters workers by name when on the Workers tab
   const filteredWorkers = useMemo(() => {
     const term = search.toLowerCase().trim();
     if (!term) return workers;
-    return workers.filter((worker) => worker.name.toLowerCase().includes(term));
+    return workers.filter((worker) => (worker.name || '').toLowerCase().includes(term));
   }, [workers, search]);
 
   const handleAssign = async () => {
@@ -72,14 +64,11 @@ const LiveTracking = () => {
     }, 1400);
   };
 
-  // Opens the assign modal. If this complaint already has a worker
-  // (Reassign case), free that worker first so they show up as idle
-  // again in the picker.
   const handleOpenAssignModal = async (item) => {
     if (item.assignedWorker) {
       const previousWorker = workers.find(w => w.name === item.assignedWorker);
       if (previousWorker) {
-        await unassignWorker(previousWorker.id);
+        await unassignWorker(previousWorker.id, item.id);
         const updatedWorkers = await getWorkersForMap();
         setWorkers(updatedWorkers);
       }
@@ -128,7 +117,7 @@ const LiveTracking = () => {
               <div key={item.id} className="lt-card">
                 <div className="lt-card-head">
                   <h4>{item.id}</h4>
-                  <span className={`lt-priority ${item.priority === 'High' ? 'high' : item.priority === 'Medium' ? 'medium' : 'low'}`}>{item.priority.toUpperCase()}</span>
+                  <span className={`lt-priority ${item.priority === 'High' ? 'high' : item.priority === 'Medium' ? 'medium' : 'low'}`}>{(item.priority || '').toUpperCase()}</span>
                 </div>
                 <div className="lt-muted">{item.type}</div>
                 <div className="lt-muted"><MapPin size={14} /> {item.location}</div>

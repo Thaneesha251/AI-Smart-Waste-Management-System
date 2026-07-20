@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from fastapi import UploadFile, File, Form
+from app.utils.file_upload import save_complaint_photo
+from app.services.complaint_service import update_complaint_photo
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
@@ -11,6 +14,7 @@ from app.services.complaint_service import (
     create_complaint,
     get_user_complaints,
     get_all_complaints,
+    get_filtered_complaints,
     update_complaint,
     delete_complaint,
     search_complaints,
@@ -19,6 +23,9 @@ from app.services.complaint_service import (
     release_worker_from_complaint,
     update_complaint_status
 )
+from app.services.complaint_service import get_pending_verifications
+from app.services.complaint_service import verify_complaint
+from pydantic import BaseModel
 
 from app.utils.response import success, error
 
@@ -51,7 +58,11 @@ def create(
 # DELETE COMPLAINT
 # ---------------------------
 @router.delete("/{complaint_id}")
-def delete_complaint_api(complaint_id: int, db: Session = Depends(get_db)):
+def delete_complaint_api(
+    complaint_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "officer"))
+):
     deleted = delete_complaint(db, complaint_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Complaint not found")
@@ -69,6 +80,7 @@ def search_complaints_api(query: str, db: Session = Depends(get_db)):
     return success("Complaints found", {"results": complaints, "count": len(complaints)})
 
 
+
 # ---------------------------
 # ASSIGN WORKER (ADMIN/OFFICER ONLY)
 # ---------------------------
@@ -83,6 +95,31 @@ def assign_worker_api(
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint or worker not found")
     return success("Worker assigned successfully", complaint)
+
+
+# ---------------------------
+# UPLOAD COMPLAINT PHOTO          
+# ---------------------------
+@router.post("/{complaint_id}/upload-photo")
+def upload_complaint_photo(
+    complaint_id: int,
+    type: str = Form(..., description="before or after"),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "officer", "worker"))
+):
+    if type not in ("before", "after"):
+        raise HTTPException(status_code=400, detail="type must be 'before' or 'after'")
+    from app.models.complaint import Complaint as ComplaintModel
+    complaint = db.query(ComplaintModel).filter(ComplaintModel.id == complaint_id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    url = save_complaint_photo(file, complaint_id, type)
+    updated = update_complaint_photo(db, complaint_id, type, url)
+    return success(
+        f"{type.capitalize()} photo uploaded successfully",
+        updated
+    )
 
 
 # ---------------------------
@@ -133,11 +170,65 @@ def my_complaints(
 # ---------------------------
 @router.get("/all")
 def all_complaints(
+    status: str = Query(None),
+    zone: str = Query(None),
+    worker_id: int = Query(None),
+    date_from: str = Query(None),
+    date_to: str = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     user: User = Depends(require_admin)
 ):
-    complaints = get_all_complaints(db)
+    complaints = get_filtered_complaints(
+        db,
+        status=status,
+        zone=zone,
+        worker_id=worker_id,
+        date_from=date_from,
+        date_to=date_to,
+        skip=skip,
+        limit=limit,
+    )
     return success("All complaints fetched", complaints)
+
+
+
+# ---------------------------
+# GET PENDING VERIFICATIONS (ADMIN/OFFICER ONLY)
+# ---------------------------
+@router.get("/verifications")
+def pending_verifications(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "officer"))
+):
+    verifications = get_pending_verifications(db)
+    if not verifications:
+        return success("No pending verifications", {"results": [], "count": 0})
+    return success("Pending verifications fetched", {"results": verifications, "count": len(verifications)})
+
+
+
+# ---------------------------
+# VERIFY COMPLAINT (ADMIN/OFFICER ONLY)
+# ---------------------------
+
+
+class VerifyBody(BaseModel):
+    approved: bool
+
+
+@router.patch("/{complaint_id}/verify")
+def verify_complaint_api(
+    complaint_id: int,
+    body: VerifyBody,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "officer"))
+):
+    result = verify_complaint(db, complaint_id, body.approved)
+    if not result:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    return success("Complaint verification updated", result)
 
 
 # ---------------------------

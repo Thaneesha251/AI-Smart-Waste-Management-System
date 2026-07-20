@@ -148,6 +148,17 @@ def delete_worker(
     return success(message="Worker deleted successfully")
 
 
+# GET WORKER PERFORMANCE REPORT
+@router.get("/report/performance")
+def get_worker_performance_report(
+    db: Session = Depends(get_db),
+    current_user = Depends(require_role("admin", "officer"))
+):
+    """Get worker performance report ordered by complaints completed"""
+    report = worker_crud.get_worker_performance_report(db)
+    return success(message="Worker performance report fetched successfully", data=report)
+
+
 # GET WORKERS STATS
 @router.get("/stats/overview")
 def get_workers_stats(

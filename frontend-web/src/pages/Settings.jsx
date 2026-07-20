@@ -1,6 +1,7 @@
 import { Bell, Palette, Shield, User } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSettings } from '../context/SettingsContext';
+import { getMyProfile, updateMyProfile } from '../services/userService';
 import '../styles/Pages.css';
 
 const tabs = [
@@ -13,12 +14,62 @@ const tabs = [
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('system');
   const [saved, setSaved] = useState(false);
-  const [form, setForm] = useState({ name: 'Admin Officer', department: 'Municipality', email: 'admin@smartwaste.gov' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({ name: '', department: 'Municipality', email: '' });
   const { darkMode, setDarkMode, autoAssign, setAutoAssign } = useSettings();
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await getMyProfile();
+        setForm({
+          name: profile.name || '',
+          department: 'Municipality',
+          email: profile.email || ''
+        });
+
+        if (profile.theme_preference === 'dark') {
+          setDarkMode(true);
+        } else {
+          setDarkMode(false);
+        }
+      } catch (err) {
+        setError('Unable to load your profile right now.');
+      }
+    };
+
+    loadProfile();
+  }, [setDarkMode]);
+
+  const handleSave = async () => {
+    if (activeTab !== 'account') {
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      await updateMyProfile({ name: form.name, email: form.email });
+      setSaved(true);
+      setError('');
+    } catch (err) {
+      setSaved(false);
+      setError(err?.response?.data?.message || 'Unable to save your profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDarkModeChange = async (checked) => {
+    setDarkMode(checked);
+    try {
+      await updateMyProfile({ theme_preference: checked ? 'dark' : 'light' });
+      setError('');
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Unable to save your theme preference.');
+    }
   };
 
   return (
@@ -28,7 +79,9 @@ const Settings = () => {
           <h2 className="header-title">Settings</h2>
           <p className="header-subtitle">Configure the admin dashboard experience.</p>
         </div>
-        <button className="primary-btn" onClick={handleSave}>{saved ? 'Saved!' : 'Save Changes'}</button>
+        <button className="primary-btn" onClick={handleSave} disabled={saving || activeTab !== 'account'}>
+          {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Changes'}
+        </button>
       </div>
       <div className="settings-layout">
         <div className="settings-nav">
@@ -58,7 +111,7 @@ const Settings = () => {
                   <p>Enable dark styling across analytics dashboards.</p>
                 </div>
                 <label className="toggle-switch">
-                  <input type="checkbox" checked={darkMode} onChange={(e) => setDarkMode(e.target.checked)} />
+                  <input type="checkbox" checked={darkMode} onChange={(e) => handleDarkModeChange(e.target.checked)} />
                   <span className="slider" />
                 </label>
               </div>
@@ -74,6 +127,7 @@ const Settings = () => {
           )}
           {activeTab === 'account' && (
             <>
+              {error && <div className="empty-state" style={{ marginBottom: '12px', color: '#b91c1c' }}>{error}</div>}
               <div className="field-group">
                 <label>Full Name</label>
                 <input className="settings-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />

@@ -5,6 +5,7 @@ from app.models.worker import Worker
 from app.schemas.worker import WorkerCreate, WorkerUpdate
 from sqlalchemy import desc
 from typing import List, Optional
+from datetime import date
 
 
 def create_worker(db: Session, worker: WorkerCreate) -> Worker:
@@ -106,3 +107,24 @@ def get_workers_stats(db: Session) -> dict:
         "on_job_workers": on_job_workers,
         "verified_workers": verified_workers
     }
+
+
+def get_worker_performance_report(db: Session) -> List[dict]:
+    workers = (
+        db.query(Worker)
+        .order_by(desc(Worker.complaints_completed))
+        .all()
+    )
+
+    return [
+        {
+            "worker_id": worker.id,
+            "name": worker.name,
+            "zone": worker.zone or "Unassigned",
+            "status": worker.status,
+            "complaints_completed": worker.complaints_completed or 0,
+            "average_rating": worker.average_rating or 0.0,
+            "joined_date": worker.created_at.date().isoformat() if worker.created_at else None,
+        }
+        for worker in workers
+    ]

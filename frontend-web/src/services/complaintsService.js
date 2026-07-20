@@ -13,14 +13,45 @@ const mockComplaints = [
   { id: '#138', location: 'RS Puram', type: 'Illegal Dumping', status: 'Resolved', time: '4 hrs ago', priority: 'Medium' }
 ];
 
+const STATUS_LABELS = {
+  pending: 'Pending',
+  in_progress: 'In Progress',
+  resolved: 'Resolved',
+  rejected: 'Rejected',
+};
+
+const timeAgo = (isoString) => {
+  if (!isoString) return '—';
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+};
+
+const transformComplaint = (c) => ({
+  id: c.id,
+  location: c.title || '—',
+  type: c.category ? c.category.replace('_', ' ') : 'General',
+  priority: c.priority ? c.priority.charAt(0).toUpperCase() + c.priority.slice(1) : 'Low',
+  status: STATUS_LABELS[c.status] || c.status,
+  time: timeAgo(c.created_at),
+  description: c.description,
+  raw_status: c.status,
+});
+
 export const getComplaints = async (params = {}) => {
   if (USE_MOCK) {
     return new Promise((resolve) => {
       setTimeout(() => resolve(mockComplaints), 300);
     });
   }
-  const response = await api.get('/complaints', { params });
-  return response.data.data || [];
+  const response = await api.get('/complaints/complaints/all', { params });
+  const results = response.data.data.results || [];
+  return results.map(transformComplaint);
 };
 
 export const getComplaintById = async (id) => {
@@ -29,8 +60,8 @@ export const getComplaintById = async (id) => {
       setTimeout(() => resolve(mockComplaints.find((item) => item.id === id) || null), 300);
     });
   }
-  const response = await api.get(`/complaints/${id}`);
-  return response.data;
+  const response = await api.get(`/complaints/complaints/${id}`);
+  return transformComplaint(response.data.data);
 };
 
 export const getRecentComplaints = async () => {
@@ -39,6 +70,7 @@ export const getRecentComplaints = async () => {
       setTimeout(() => resolve(mockComplaints.slice(0, 6)), 300);
     });
   }
-  const response = await api.get('/complaints/recent');
-  return response.data;
+  const response = await api.get('/complaints/complaints/all', { params: { limit: 6, skip: 0 } });
+  const results = response.data.data.results || [];
+  return results.map(transformComplaint);
 };

@@ -53,22 +53,38 @@ const mockVerifications = [
   },
 ];
 
+// Backend field → UI field mapping. Backend has no "similarity score"
+// (that's a mock-only visual flourish, not a real AI comparison feature)
+// — we show a fixed placeholder label instead of a fake number.
+const transformVerification = (v) => ({
+  id: v.id,
+  complaint: v.title,
+  worker: v.worker_name || 'Unassigned',
+  type: v.category ? v.category.replace('_', ' ') : 'General',
+  status: v.is_verified ? 'Approved' : 'Pending',
+  similarity: 'N/A',
+  beforeImg: v.before_photo_url ? `http://localhost:8000${v.before_photo_url}` : null,
+  afterImg: v.after_photo_url ? `http://localhost:8000${v.after_photo_url}` : null,
+});
+
 export const getVerifications = async () => {
   if (USE_MOCK) {
     return new Promise((resolve) => {
       setTimeout(() => resolve(mockVerifications), 300);
     });
   }
-  const response = await api.get('/verifications');
-  return response.data;
+  const response = await api.get('/complaints/complaints/verifications');
+  const results = response.data.data.results || [];
+  return results.map(transformVerification);
 };
 
-export const updateVerification = async (id, status, comment) => {
+export const updateVerification = async (id, status) => {
   if (USE_MOCK) {
     return new Promise((resolve) => {
-      setTimeout(() => resolve({ id, status, comment }), 300);
+      setTimeout(() => resolve({ id, status }), 300);
     });
   }
-  const response = await api.patch(`/verifications/${id}`, { status, comment });
+  const approved = status === 'Approved';
+  const response = await api.patch(`/complaints/complaints/${id}/verify`, { approved });
   return response.data;
 };

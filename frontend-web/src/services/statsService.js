@@ -8,8 +8,8 @@ export const getSummary = async () => {
       setTimeout(() => resolve({ total_complaints: 145, pending: 20, resolved: 110, active_workers: 15, emergency_alerts: 2 }), 300);
     });
   }
-  const response = await api.get('/stats/summary');
-  return response.data;
+  const response = await api.get('/admin/stats/summary');
+  return response.data.data;
 };
 
 export const getWeeklyStats = async () => {
@@ -26,8 +26,8 @@ export const getWeeklyStats = async () => {
       ]), 300);
     });
   }
-  const response = await api.get('/stats/weekly');
-  return response.data;
+  const response = await api.get('/admin/stats/weekly');
+  return response.data.data;
 };
 
 export const getDistribution = async () => {
@@ -42,8 +42,8 @@ export const getDistribution = async () => {
       ]), 300);
     });
   }
-  const response = await api.get('/stats/distribution');
-  return response.data;
+  const response = await api.get('/admin/stats/distribution');
+  return response.data.data;
 };
 
 export const getMonthlyStats = async () => {
@@ -59,8 +59,8 @@ export const getMonthlyStats = async () => {
       ]), 300);
     });
   }
-  const response = await api.get('/stats/monthly');
-  return response.data;
+  const response = await api.get('/admin/stats/monthly');
+  return response.data.data;
 };
 
 export const getZoneStats = async () => {
@@ -75,6 +75,6 @@ export const getZoneStats = async () => {
       ]), 300);
     });
   }
-  const response = await api.get('/stats/by-zone');
-  return response.data;
+  const response = await api.get('/admin/stats/by-zone');
+  return response.data.data;
 };

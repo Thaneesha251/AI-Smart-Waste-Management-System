@@ -4,29 +4,36 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.core.rbac import require_admin
 from app.models.complaint import Complaint
 from app.models.enums import ComplaintStatus
+from app.models.worker import Worker
 from app.utils.response import success
 
 router = APIRouter()
 
 
 @router.get("/ping")
-def admin_ping():
-    return {
-        "success": True,
-        "message": "Admin route is working"
-    }
+def admin_ping(current_user=Depends(get_current_user)):
+    return success("Admin route is working")
 
 
 # ---------------------------
 # DASHBOARD SUMMARY CARDS
 # ---------------------------
 @router.get("/stats/summary")
-def get_summary(db: Session = Depends(get_db)):
+def get_summary(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
     total = db.query(Complaint).count()
     pending = db.query(Complaint).filter(Complaint.status == ComplaintStatus.PENDING.value).count()
     resolved = db.query(Complaint).filter(Complaint.status == ComplaintStatus.RESOLVED.value).count()
+
+    active_workers = db.query(Worker).filter(
+        Worker.status.in_(["online", "on-job"])
+    ).count()
 
     return success(
         "Summary fetched",
@@ -34,7 +41,7 @@ def get_summary(db: Session = Depends(get_db)):
             "total_complaints": total,
             "pending": pending,
             "resolved": resolved,
-            "active_workers": 0,       # will connect once worker status logic exists
+            "active_workers": active_workers,
             "emergency_alerts": 0,     # placeholder until alert logic is added
         }
     )
@@ -44,7 +51,10 @@ def get_summary(db: Session = Depends(get_db)):
 # WEEKLY STATISTICS (LINE CHART)
 # ---------------------------
 @router.get("/stats/weekly")
-def get_weekly_stats(db: Session = Depends(get_db)):
+def get_weekly_stats(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
     today = datetime.utcnow().date()
     week_start = today - timedelta(days=6)
     days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -81,7 +91,10 @@ def get_weekly_stats(db: Session = Depends(get_db)):
 # DISTRIBUTION BY CATEGORY (DONUT CHART)
 # ---------------------------
 @router.get("/stats/distribution")
-def get_distribution(db: Session = Depends(get_db)):
+def get_distribution(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
     colors = {
         "garbage": "#3b82f6",
         "drainage": "#22c55e",
@@ -112,7 +125,10 @@ def get_distribution(db: Session = Depends(get_db)):
 # MONTHLY STATS (ANALYTICS PAGE)
 # ---------------------------
 @router.get("/stats/monthly")
-def get_monthly_stats(db: Session = Depends(get_db)):
+def get_monthly_stats(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
     rows = (
         db.query(
             func.strftime("%Y-%m", Complaint.created_at).label("month"),
@@ -144,7 +160,10 @@ def get_monthly_stats(db: Session = Depends(get_db)):
 # COMPLAINTS BY ZONE (ANALYTICS PAGE)
 # ---------------------------
 @router.get("/stats/by-zone")
-def get_zone_stats(db: Session = Depends(get_db)):
+def get_zone_stats(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
     # Note: your Complaint model doesn't have a dedicated "zone" field yet,
     # only "category" and free-text "description". Using category as a
     # stand-in grouping until a proper zone/location field is added.
