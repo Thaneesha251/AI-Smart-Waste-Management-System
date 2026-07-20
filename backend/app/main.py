@@ -10,10 +10,10 @@ from app.api.v1.routes import auth, user, complaint, admin, ai
 
 
 # ==========================================================
-# DATABASE INITIALIZATION (Development Only)
+# DATABASE INITIALIZATION (Migrations handled by Alembic)
 # ==========================================================
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 
 # ==========================================================

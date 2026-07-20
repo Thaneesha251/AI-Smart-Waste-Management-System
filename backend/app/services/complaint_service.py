@@ -85,3 +85,55 @@ def update_complaint_status(db: Session, complaint_id: int, status):
         "status": complaint.status,
         "updated_at": complaint.updated_at
     }
+
+
+# ---------------------------
+# WORKER: ACCEPT COMPLAINT
+# ---------------------------
+def accept_complaint(db: Session, complaint_id: int, worker_id: int):
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint:
+        return None
+
+    complaint.worker_id = worker_id
+    complaint.status = ComplaintStatus.ASSIGNED.value
+    complaint.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(complaint)
+    return complaint
+
+
+# ---------------------------
+# WORKER: START COMPLAINT
+# ---------------------------
+def start_complaint(db: Session, complaint_id: int):
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint:
+        return None
+
+    complaint.status = ComplaintStatus.IN_PROGRESS.value
+    complaint.started_at = datetime.utcnow()
+    complaint.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(complaint)
+    return complaint
+
+
+# ---------------------------
+# WORKER: COMPLETE COMPLAINT
+# ---------------------------
+def complete_complaint(db: Session, complaint_id: int, after_image_url: str):
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint:
+        return None
+
+    complaint.status = ComplaintStatus.RESOLVED.value
+    complaint.afterImageUrl = after_image_url
+    complaint.completed_at = datetime.utcnow()
+    complaint.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(complaint)
+    return complaint

@@ -30,5 +30,9 @@ class Complaint(Base):
     imageUrl = Column(String(500), nullable=True)
     afterImageUrl = Column(String(500), nullable=True)
 
+    worker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

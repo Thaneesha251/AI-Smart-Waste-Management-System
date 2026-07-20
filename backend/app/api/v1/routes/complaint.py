@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+import shutil
+import os
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -11,7 +13,10 @@ from app.services.complaint_service import (
     create_complaint,
     get_user_complaints,
     get_all_complaints,
-    update_complaint_status
+    update_complaint_status,
+    accept_complaint,
+    start_complaint,
+    complete_complaint
 )
 
 from app.utils.response import success, error
@@ -137,3 +142,78 @@ def update_status(
         return error("Complaint not found", status_code=404)
 
     return success("Complaint status updated", updated)
+
+
+# ---------------------------
+# WORKER - ACCEPT COMPLAINT
+# ---------------------------
+@router.put("/accept/{complaint_id}")
+def accept(
+    complaint_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    if user.role != "worker":
+        return error("Only workers can accept tasks", status_code=403)
+
+    complaint = accept_complaint(db, complaint_id, user.id)
+    if not complaint:
+        return error("Complaint not found", status_code=404)
+
+    return success("Task accepted", ComplaintResponse.from_orm(complaint).dict())
+
+
+# ---------------------------
+# WORKER - START COMPLAINT
+# ---------------------------
+@router.put("/start/{complaint_id}")
+def start(
+    complaint_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    if user.role != "worker":
+        return error("Only workers can start tasks", status_code=403)
+
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint:
+        return error("Complaint not found", status_code=404)
+
+    if complaint.worker_id != user.id:
+        return error("Unauthorized: Task assigned to another worker", status_code=403)
+
+    updated = start_complaint(db, complaint_id)
+    return success("Task started", ComplaintResponse.from_orm(updated).dict())
+
+
+# ---------------------------
+# WORKER - COMPLETE COMPLAINT
+# ---------------------------
+@router.post("/complete/{complaint_id}")
+def complete(
+    complaint_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    if user.role != "worker":
+        return error("Only workers can complete tasks", status_code=403)
+
+    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not complaint:
+        return error("Complaint not found", status_code=404)
+
+    if complaint.worker_id != user.id:
+        return error("Unauthorized: Task assigned to another worker", status_code=403)
+
+    # Save After Image
+    os.makedirs("uploads", exist_ok=True)
+    file_path = f"uploads/after_{complaint_id}_{file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # In production, this would be a full URL. For local dev:
+    after_image_url = f"http://192.168.137.1:8000/{file_path}"
+
+    updated = complete_complaint(db, complaint_id, after_image_url)
+    return success("Task completed successfully", ComplaintResponse.from_orm(updated).dict())

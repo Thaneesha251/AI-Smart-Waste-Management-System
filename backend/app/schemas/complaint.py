@@ -38,6 +38,9 @@ class ComplaintResponse(BaseModel):
     imageUrl: Optional[str]
     afterImageUrl: Optional[str]
     user_id: int
+    worker_id: Optional[int] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
