@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File
 from pathlib import Path
+from ml.inference.priority_engine import assign_priority
 import shutil
 
 from ml.inference.detector import WasteDetector
@@ -25,7 +26,12 @@ async def detect_waste(file: UploadFile = File(...)):
     # Run detection
     detections = detector.detect(str(file_path))
 
+    priority_info = assign_priority(detections)
+
     return {
         'filename': file.filename,
-        'detections': detections
+        'detections': detections,
+        'priority': priority_info['priority'],
+        'priority_score': priority_info['priority_score'],
+        'reason': priority_info['reason']
     }
