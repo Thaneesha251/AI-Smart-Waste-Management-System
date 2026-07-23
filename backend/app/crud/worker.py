@@ -2,15 +2,29 @@
 
 from sqlalchemy.orm import Session
 from app.models.worker import Worker
+from app.models.user import User
 from app.schemas.worker import WorkerCreate, WorkerUpdate
+from app.core.security import hash_password
 from sqlalchemy import desc
 from typing import List, Optional
 from datetime import date
 
 
 def create_worker(db: Session, worker: WorkerCreate) -> Worker:
+    # Step 1 — create the login account (User) with hashed password
+    db_user = User(
+        name=worker.name,
+        email=worker.email,
+        password_hash=hash_password(worker.password),
+        role="worker"
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    # Step 2 — create the worker profile, linked to that new User
     db_worker = Worker(
-        user_id=worker.user_id,
+        user_id=db_user.id,
         name=worker.name,
         email=worker.email,
         phone=worker.phone,

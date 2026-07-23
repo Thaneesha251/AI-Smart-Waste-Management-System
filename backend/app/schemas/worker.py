@@ -14,7 +14,7 @@ class WorkerBase(BaseModel):
 
 
 class WorkerCreate(WorkerBase):
-    user_id: int
+    password: str = Field(..., min_length=6)
 
 
 class WorkerUpdate(BaseModel):
