@@ -7,6 +7,10 @@ from app.core.middleware import LoggingMiddleware
 from app.core.exceptions.handlers import register_exception_handlers
 
 from app.api.v1.routes import auth, user, complaint, admin, ai
+from app.api.v1 import workers
+from app.core.database import SessionLocal
+from app.models.worker import Worker
+from app.core.security import hash_password
 
 
 # ==========================================================
@@ -90,10 +94,45 @@ app.include_router(
 )
 
 app.include_router(
+    workers.router,
+    prefix="/api/v1/workers",
+    tags=["Worker"]
+)
+
+app.include_router(
     ai.router,
     prefix="/api/v1/ai",
     tags=["AI Detection"]
 )
+
+
+# ==========================================================
+# STARTUP EVENT
+# ==========================================================
+
+@app.on_event("startup")
+def startup_event():
+    # Create a temporary test worker for development
+    db = SessionLocal()
+    try:
+        worker_id = "W001"
+        existing = db.query(Worker).filter(Worker.worker_id == worker_id).first()
+        if not existing:
+            print(f"Creating temporary test worker: {worker_id}")
+            test_worker = Worker(
+                worker_id=worker_id,
+                name="Test Worker",
+                password=hash_password("password123"),
+                phone="9876543210",
+                area="Central Zone",
+                is_active=True
+            )
+            db.add(test_worker)
+            db.commit()
+    except Exception as e:
+        print(f"Error creating test worker: {e}")
+    finally:
+        db.close()
 
 
 # ==========================================================

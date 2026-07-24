@@ -13,7 +13,7 @@ router = APIRouter()
 def get_me(current_user: User = Depends(get_current_user)):
     return success(
         "User profile fetched successfully",
-        UserResponse.from_orm(current_user).dict()
+        UserResponse.model_validate(current_user).model_dump()
     )
 
 @router.put("/me", response_model=None)
@@ -41,5 +41,5 @@ def update_me(
 
     return success(
         "Profile updated successfully",
-        UserResponse.from_orm(current_user).dict()
+        UserResponse.model_validate(current_user).model_dump()
     )

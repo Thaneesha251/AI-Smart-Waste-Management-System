@@ -39,7 +39,7 @@ def create(
 
     return success(
         "Complaint created successfully",
-        ComplaintResponse.from_orm(complaint).dict()
+        ComplaintResponse.model_validate(complaint).model_dump()
     )
 
 
@@ -52,7 +52,7 @@ def my_complaints(
     user: User = Depends(get_current_user)
 ):
     complaints = get_user_complaints(db, user.id)
-    return success("User complaints fetched", [ComplaintResponse.from_orm(c).dict() for c in complaints])
+    return success("User complaints fetched", [ComplaintResponse.model_validate(c).model_dump() for c in complaints])
 
 
 # ---------------------------
@@ -67,7 +67,7 @@ def all_complaints(
         return error("Unauthorized access", status_code=403)
 
     complaints = get_all_complaints(db)
-    return success("All complaints fetched", [ComplaintResponse.from_orm(c).dict() for c in complaints])
+    return success("All complaints fetched", [ComplaintResponse.model_validate(c).model_dump() for c in complaints])
 
 
 # ---------------------------
@@ -89,14 +89,14 @@ def update(
         return error("Unauthorized to update this complaint", status_code=403)
 
     # Apply updates
-    update_data = data.dict(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(complaint, key, value)
 
     db.commit()
     db.refresh(complaint)
 
-    return success("Complaint updated successfully", ComplaintResponse.from_orm(complaint).dict())
+    return success("Complaint updated successfully", ComplaintResponse.model_validate(complaint).model_dump())
 
 
 # ---------------------------
@@ -123,7 +123,7 @@ def cancel_complaint(
     db.commit()
     db.refresh(complaint)
 
-    return success("Complaint cancelled successfully", ComplaintResponse.from_orm(complaint).dict())
+    return success("Complaint cancelled successfully", ComplaintResponse.model_validate(complaint).model_dump())
 
 
 # ---------------------------
@@ -156,64 +156,35 @@ def accept(
     if user.role != "worker":
         return error("Only workers can accept tasks", status_code=403)
 
-    complaint = accept_complaint(db, complaint_id, user.id)
-    if not complaint:
-        return error("Complaint not found", status_code=404)
+    # Here, 'user' is the worker. We need their worker table ID.
+    # The current user dependency returns a User model.
+    # We might need to find the Worker record associated with this user,
+    # OR the token should have been a worker token.
+    # In this project, workers might be in the 'workers' table OR 'users' table with role 'worker'.
+    # Actually, we have a separate 'workers' table now.
 
-    return success("Task accepted", ComplaintResponse.from_orm(complaint).dict())
+    # If the user logged in as a worker, their user_id in payload refers to 'workers.id'.
+    # get_current_user from dependencies.py searches 'users' table.
+    # This is a potential conflict.
+
+    return error("Use /api/v1/workers/ endpoints for worker operations", status_code=400)
 
 
 # ---------------------------
-# WORKER - START COMPLAINT
+# WORKER - START COMPLAINT (LEGACY - REDIRECT TO WORKER API)
 # ---------------------------
 @router.put("/start/{complaint_id}")
 def start(
-    complaint_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    complaint_id: int
 ):
-    if user.role != "worker":
-        return error("Only workers can start tasks", status_code=403)
-
-    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
-    if not complaint:
-        return error("Complaint not found", status_code=404)
-
-    if complaint.worker_id != user.id:
-        return error("Unauthorized: Task assigned to another worker", status_code=403)
-
-    updated = start_complaint(db, complaint_id)
-    return success("Task started", ComplaintResponse.from_orm(updated).dict())
+    return error("Use /api/v1/workers/complaints/{id}/start", status_code=400)
 
 
 # ---------------------------
-# WORKER - COMPLETE COMPLAINT
+# WORKER - COMPLETE COMPLAINT (LEGACY - REDIRECT TO WORKER API)
 # ---------------------------
 @router.post("/complete/{complaint_id}")
 def complete(
-    complaint_id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    complaint_id: int
 ):
-    if user.role != "worker":
-        return error("Only workers can complete tasks", status_code=403)
-
-    complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
-    if not complaint:
-        return error("Complaint not found", status_code=404)
-
-    if complaint.worker_id != user.id:
-        return error("Unauthorized: Task assigned to another worker", status_code=403)
-
-    # Save After Image
-    os.makedirs("uploads", exist_ok=True)
-    file_path = f"uploads/after_{complaint_id}_{file.filename}"
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # In production, this would be a full URL. For local dev:
-    after_image_url = f"http://192.168.137.1:8000/{file_path}"
-
-    updated = complete_complaint(db, complaint_id, after_image_url)
-    return success("Task completed successfully", ComplaintResponse.from_orm(updated).dict())
+    return error("Use /api/v1/workers/complaints/{id}/complete", status_code=400)

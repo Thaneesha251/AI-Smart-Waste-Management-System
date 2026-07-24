@@ -20,7 +20,7 @@ def create_complaint(db: Session, user_id: int, data: ComplaintCreate):
         zone=data.zone,
         priority=data.priority,
         wasteType=data.wasteType,
-        imageUrl=data.imageUrl,
+        imageUrl=data.image_url, # Map from snake_case schema to CamelCase model
         status=ComplaintStatus.PENDING.value
     )
 
@@ -58,12 +58,6 @@ def get_all_complaints(db: Session):
 # UPDATE COMPLAINT STATUS
 # ---------------------------
 def update_complaint_status(db: Session, complaint_id: int, status):
-    """
-    status can be:
-    - ComplaintStatus enum
-    - or raw string (for safety from API layer)
-    """
-
     complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
 
     if not complaint:
@@ -73,7 +67,7 @@ def update_complaint_status(db: Session, complaint_id: int, status):
     if isinstance(status, ComplaintStatus):
         complaint.status = status.value
     else:
-        complaint.status = status
+        complaint.status = str(status)
 
     complaint.updated_at = datetime.utcnow()
 
@@ -95,8 +89,11 @@ def accept_complaint(db: Session, complaint_id: int, worker_id: int):
     if not complaint:
         return None
 
-    complaint.worker_id = worker_id
+    # Use assigned_worker_id (new)
+    complaint.assigned_worker_id = worker_id
+    # Also set legacy worker_id for now if needed, but primary is assigned_worker_id
     complaint.status = ComplaintStatus.ASSIGNED.value
+    complaint.assigned_at = datetime.utcnow()
     complaint.updated_at = datetime.utcnow()
 
     db.commit()
@@ -129,7 +126,7 @@ def complete_complaint(db: Session, complaint_id: int, after_image_url: str):
     if not complaint:
         return None
 
-    complaint.status = ComplaintStatus.RESOLVED.value
+    complaint.status = ComplaintStatus.COMPLETED.value
     complaint.afterImageUrl = after_image_url
     complaint.completed_at = datetime.utcnow()
     complaint.updated_at = datetime.utcnow()
